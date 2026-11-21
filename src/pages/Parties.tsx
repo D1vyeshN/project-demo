@@ -51,6 +51,7 @@ export default function PartiesPage() {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
             <Input
               type="text"
+              className='pl-10'
               placeholder="Search by name or phone..."
               value={search}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}

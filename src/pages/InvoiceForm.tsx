@@ -9,7 +9,6 @@ import { GST_RATES } from '../lib/constants';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { input as Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
@@ -386,14 +385,14 @@ export default function InvoiceForm() {
                             <Input
                               type="number"
                               step="1"
-                              min="0"
+                              min="1"
                               className="w-full h-8 text-right"
                               value={line.qty}
                               onChange={(e) =>
                                 updateLine(
                                   idx,
                                   'qty',
-                                  Math.max(0, parseInt(e.target.value) || 0)
+                                  Math.max(1, parseInt(e.target.value) || 1)
                                 )
                               }
                             />
@@ -618,35 +617,65 @@ export default function InvoiceForm() {
           <CardContent>
             <div className="space-y-6">
               <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                <h3 className="text-sm font-medium text-blue-700 mb-2">Party: {party.name}</h3>
+                <h3 className="text-sm font-medium text-blue-700 mb-2">
+                  Party: {party.name}
+                </h3>
                 <p className="text-sm text-gray-600">
-                  Previous Outstanding:
-                  <span className="font-medium">{party.currentOutstanding.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+                  Previous Outstanding:{' '}
+                  <span className="font-medium">
+                    {party.currentOutstanding.toLocaleString(undefined, {
+                      style: 'currency',
+                      currency: 'INR',
+                    })}
+                  </span>
                 </p>
               </div>
 
               <div className="bg-green-50 rounded-lg p-4 border border-green-200">
-                <h3 className="text-sm font-medium text-green-700 mb-2">Invoice Summary</h3>
+                <h3 className="text-sm font-medium text-green-700 mb-2">
+                  Invoice Summary
+                </h3>
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Subtotal</span>
-                    <span>{subtotal.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+                    <span>
+                      {subtotal.toLocaleString(undefined, {
+                        style: 'currency',
+                        currency: 'INR',
+                      })}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Discount (−)</span>
-                    <span>-{discount.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+                    <span>-{discount.toLocaleString(undefined, {
+                      style: 'currency',
+                      currency: 'INR',
+                    })}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">Taxable Amount</span>
-                    <span>{taxableAmount.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+                    <span>
+                      {taxableAmount.toLocaleString(undefined, {
+                        style: 'currency',
+                        currency: 'INR',
+                      })}
+                    </span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-gray-600">GST (18%)</span>
-                    <span>{gst.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+                    <span>{gst.toLocaleString(undefined, {
+                      style: 'currency',
+                      currency: 'INR',
+                    })}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold pt-2 border-t border-green-200">
                     <span>Invoice Total</span>
-                    <span>{total.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+                    <span>
+                      {total.toLocaleString(undefined, {
+                        style: 'currency',
+                        currency: 'INR',
+                      })}
+                    </span>
                   </div>
                 </div>
               </div>

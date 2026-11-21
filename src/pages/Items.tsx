@@ -3,7 +3,7 @@ import { useInvoices } from '../hooks/useInvoices';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '../components/ui/card';
+import { Card, CardContent, CardHeader, CardFooter } from '../components/ui/card';
 import { input as Input } from '../components/ui/input';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
@@ -100,7 +100,7 @@ export default function ItemsPage() {
                         </TableCell>
                         <TableCell className="text-center">
                           <Badge
-                            variant={outOfStock ? 'destructive' : low ? 'secondary' : 'default'}
+                            variant={outOfStock ? 'destructive' : low ? 'warning' : 'default'}
                             className={outOfStock || low ? 'px-2 py-1' : 'px-2 py-1 bg-green-100 text-green-700'}
                           >
                             {outOfStock ? 'Out of Stock' : low ? 'Low Stock' : 'In Stock'}

@@ -48,6 +48,19 @@ export default {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        // Mockup-specific colors
+        sidebar: {
+          DEFAULT: 'hsl(var(--sidebar))',
+          foreground: 'hsl(var(--sidebar-foreground))',
+          active: 'hsl(var(--sidebar-active))',
+          activeForeground: 'hsl(var(--sidebar-active-foreground))',
+        },
+        chart: {
+          blue: 'hsl(var(--chart-blue))',
+          green: 'hsl(var(--chart-green))',
+          red: 'hsl(var(--chart-red))',
+          amber: 'hsl(var(--chart-amber))',
+        },
       },
       borderRadius: {
         lg: 'var(--radius)',

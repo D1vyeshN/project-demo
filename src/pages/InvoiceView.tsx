@@ -1,6 +1,4 @@
 import { useInvoices } from '../hooks/useInvoices';
-import { useParties } from '../hooks/useParties';
-import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -8,14 +6,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 
 export default function InvoiceView() {
   const { id } = useParams<{ id: string }>();
-  const { invoices, recordPayment } = useInvoices();
-  const { parties, updateParty } = useParties();
+  const { invoices } = useInvoices();
   const invoice = invoices.find((inv) => inv.id === id);
-
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState('');
-  const [paymentMode, setPaymentMode] = useState<'Cash' | 'Bank' | 'UPI' | 'etc.'>('Cash');
-  const [paymentRef, setPaymentRef] = useState('');
 
   if (!invoice) {
     return (
@@ -40,26 +32,6 @@ export default function InvoiceView() {
     Unpaid: 'bg-red-100 text-red-700',
   };
 
-  const handleRecordPayment = () => {
-    const amount = parseFloat(paymentAmount);
-    if (!amount || amount <= 0 || amount > balanceDue) return;
-
-    const updated = recordPayment(invoice.id, amount, paymentMode, paymentRef || undefined);
-    if (!updated) return;
-
-    // Reduce party outstanding by the payment amount
-    const party = parties.find((p) => p.id === invoice.partyId);
-    if (party) {
-      updateParty(invoice.partyId, {
-        currentOutstanding: Math.max(0, party.currentOutstanding - amount),
-      });
-    }
-
-    setShowPaymentModal(false);
-    setPaymentAmount('');
-    setPaymentRef('');
-  };
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -73,14 +45,6 @@ export default function InvoiceView() {
           >
             Print
           </button>
-          {balanceDue > 0 && (
-            <button
-              onClick={() => setShowPaymentModal(true)}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
-            >
-              Record Payment
-            </button>
-          )}
         </div>
       </div>
 
@@ -200,7 +164,7 @@ export default function InvoiceView() {
           <div>
             <div className="text-gray-600">Balance Due</div>
             <div className="font-medium text-gray-900">
-              {(invoice.total - invoice.amountReceived).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              {balanceDue.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>

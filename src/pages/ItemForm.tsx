@@ -59,6 +59,7 @@ export default function ItemForm() {
       });
       setError('');
       setIsDirty(false);
+      setImagePreview(null);
     } else if (!isEdit) {
       setForm({ ...emptyForm });
       setError('');

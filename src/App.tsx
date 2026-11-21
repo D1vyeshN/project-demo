@@ -7,6 +7,8 @@ import PartiesPage from './pages/Parties';
 import PartyForm from './pages/PartyForm';
 import PartyLedger from './pages/PartyLedger';
 import InvoiceView from './pages/InvoiceView';
+import InvoiceEdit from './pages/InvoiceEdit';
+import Invoices from './pages/Invoices';
 import LowStockPage from './pages/LowStock';
 import StockMovementsPage from './pages/StockMovements';
 import InvoiceForm from './pages/InvoiceForm';
@@ -24,8 +26,10 @@ export default function App() {
         <Route path="/parties/new" element={<PartyForm />} />
         <Route path="/parties/:id/edit" element={<PartyForm />} />
         <Route path="/parties/:id/ledger" element={<PartyLedger />} />
+        <Route path="/invoices" element={<Invoices />} />
         <Route path="/invoices/new" element={<InvoiceForm />} />
         <Route path="/invoices/:id" element={<InvoiceView />} />
+        <Route path="/invoices/:id/edit" element={<InvoiceEdit />} />
         <Route path="/stock-movements" element={<StockMovementsPage />} />
         <Route path="/low-stock" element={<LowStockPage />} />
         <Route path="*" element={<NotFound />} />

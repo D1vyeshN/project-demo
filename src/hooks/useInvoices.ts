@@ -68,6 +68,7 @@ export function useInvoices() {
         ...invoice,
         amountReceived: newAmountReceived,
         status: newStatus,
+        paymentMode,
         paymentRef: paymentRef || invoice.paymentRef,
       };
 
@@ -80,6 +81,17 @@ export function useInvoices() {
     [invoices, saveInvoices]
   );
 
+  const updateInvoice = useCallback(
+    (id: string, updates: Partial<Invoice>) => {
+      const next = invoices.map((inv) =>
+        inv.id === id ? { ...inv, ...updates } : inv
+      );
+      saveInvoices(next);
+      return invoices.find((inv) => inv.id === id);
+    },
+    [invoices, saveInvoices]
+  );
+
   return {
     invoices,
     movements,
@@ -88,6 +100,7 @@ export function useInvoices() {
     getInvoice,
     addMovement,
     recordPayment,
+    updateInvoice,
     setInvoices,
     setMovements,
   };

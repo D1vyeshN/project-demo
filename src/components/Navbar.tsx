@@ -4,7 +4,8 @@ const navLinks = [
   { to: '/', label: 'Dashboard' },
   { to: '/items', label: 'Items' },
   { to: '/parties', label: 'Parties' },
-  { to: '/invoices/new', label: 'Sales Invoice' },
+  { to: '/invoices', label: 'Sales Invoices' },
+  { to: '/invoices/new', label: 'Create Sale' },
   { to: '/stock-movements', label: 'Stock Movements' },
   { to: '/low-stock', label: 'Low Stock' },
 ];

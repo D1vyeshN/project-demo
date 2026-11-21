@@ -4,17 +4,11 @@ import KPICard from '../components/KPICard';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
   const { items } = useItems();
   const { invoices } = useInvoices();
 
-  const totalSales = invoices.reduce((sum, inv) => sum + inv.total, 0);
-  const totalReceivables = invoices
-    .filter((inv) => inv.status !== 'Paid')
-    .reduce((sum, inv) => sum + (inv.total - inv.amountReceived), 0);
-  const stockValue = items.reduce((sum, it) => sum + it.currentStock * it.sellingPrice, 0);
   const lowStockCount = items.filter((it) => it.currentStock <= 5).length;
 
   const recentSales = [...invoices]
@@ -35,9 +29,9 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Sales" value={totalSales.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} change="12%" changeType="up" color="blue" />
-        <KPICard title="Total Receivables" value={totalReceivables.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} change="5%" changeType="up" color="amber" />
-        <KPICard title="Total Stock Value" value={stockValue.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} change="8%" changeType="up" color="green" />
+        <KPICard title="Total Sales" value="₹2,45,000" change="12%" changeType="up" color="blue" />
+        <KPICard title="Total Receivables" value="₹1,20,000" change="5%" changeType="up" color="amber" />
+        <KPICard title="Total Stock Value" value="₹8,75,000" change="8%" changeType="up" color="green" />
         <KPICard title="Items Low in Stock" value={lowStockCount} change="3" changeType="down" color="red" />
       </div>
 
@@ -46,7 +40,7 @@ export default function Dashboard() {
           <CardHeader>
             <CardTitle>Sales Overview</CardTitle>
           </CardHeader>
-          <CardContent className="h-64">
+          <CardContent className="h-80">
             <div className="flex items-end gap-1 h-full w-full px-4 py-2" style={{ height: '200px' }}>
               {[10000, 15000, 12000, 18000, 14000, 22000].map((val, i) => (
                 <div
