@@ -1,0 +1,14 @@
+{
+  "mcp": {
+    "servers": {
+      "shadcn": {
+        "type": "local",
+        "command": ["npx", "@jpisnice/shadcn-ui-mcp-server", "--framework", "react"],
+        "environment": {
+          "GITHUB_PERSONAL_ACCESS_TOKEN": "{env:GITHUB_TOKEN}"
+        },
+        "enabled": true
+      }
+    }
+  }
+}
