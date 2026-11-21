@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { Invoice, StockMovement } from '../lib/types';
+import type { Invoice, StockMovement, PaymentMode } from '../lib/types';
 import { getStorage, setStorage, generateId, nowISO } from '../lib/storage';
 import { STORAGE_KEYS } from '../lib/constants';
+import { statusFrom } from '../lib/invoiceCalc';
 
 export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -50,6 +51,35 @@ export function useInvoices() {
     [movements, saveMovements]
   );
 
+  const recordPayment = useCallback(
+    (
+      invoiceId: string,
+      amount: number,
+      paymentMode: PaymentMode,
+      paymentRef?: string
+    ) => {
+      const invoice = invoices.find((inv) => inv.id === invoiceId);
+      if (!invoice) return null;
+
+      const newAmountReceived = invoice.amountReceived + amount;
+      const newStatus = statusFrom(newAmountReceived, invoice.total);
+
+      const updatedInvoice: Invoice = {
+        ...invoice,
+        amountReceived: newAmountReceived,
+        status: newStatus,
+        paymentRef: paymentRef || invoice.paymentRef,
+      };
+
+      const next = invoices.map((inv) =>
+        inv.id === invoiceId ? updatedInvoice : inv
+      );
+      saveInvoices(next);
+      return updatedInvoice;
+    },
+    [invoices, saveInvoices]
+  );
+
   return {
     invoices,
     movements,
@@ -57,6 +87,7 @@ export function useInvoices() {
     addInvoice,
     getInvoice,
     addMovement,
+    recordPayment,
     setInvoices,
     setMovements,
   };

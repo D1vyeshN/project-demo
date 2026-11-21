@@ -1,7 +1,18 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useItems } from '../hooks/useItems';
-import { GST_RATES, UNITS } from '../lib/constants';
+import { Button } from '../components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { input as Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { GST_RATES, UNITS, CATEGORIES } from '../lib/constants';
 import type { Item } from '../lib/types';
 
 type ItemFormData = Omit<Item, 'id' | 'createdAt' | 'updatedAt'>;
@@ -9,11 +20,15 @@ type ItemFormData = Omit<Item, 'id' | 'createdAt' | 'updatedAt'>;
 const emptyForm: ItemFormData = {
   sku: '',
   name: '',
+  category: '',
   sellingPrice: 0,
   gstRate: 18,
   unit: 'PCS',
   openingStock: 0,
   currentStock: 0,
+  reorderLevel: 0,
+  description: '',
+  imageUrl: '',
 };
 
 export default function ItemForm() {
@@ -22,23 +37,25 @@ export default function ItemForm() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  // Track whether this component is in edit mode and which id it's editing
   const editIdRef = useRef<string | null>(id || null);
 
   const existing = isEdit ? items.find((i) => i.id === id) : undefined;
 
-  // Reset form when the route id changes (e.g., navigating between edit pages)
   useEffect(() => {
     editIdRef.current = id || null;
     if (isEdit && existing) {
       setForm({
         sku: existing.sku,
         name: existing.name,
+        category: existing.category || '',
         sellingPrice: existing.sellingPrice,
         gstRate: existing.gstRate,
         unit: existing.unit,
         openingStock: existing.openingStock,
         currentStock: existing.currentStock,
+        reorderLevel: existing.reorderLevel || 0,
+        description: existing.description || '',
+        imageUrl: existing.imageUrl || '',
       });
       setError('');
       setIsDirty(false);
@@ -46,19 +63,19 @@ export default function ItemForm() {
       setForm({ ...emptyForm });
       setError('');
       setIsDirty(false);
+      setImagePreview(null);
     }
   }, [id, isEdit, existing]);
 
   const [form, setForm] = useState<ItemFormData>({ ...emptyForm });
   const [error, setError] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  // Mark form as dirty whenever user changes a field
   const handleChange = useCallback(
     (key: keyof ItemFormData, value: any) => {
       setForm((prev) => {
         const next = { ...prev, [key]: value };
-        // Only mark dirty if value differs from original
         if (isEdit && existing) {
           const orig = existing as unknown as ItemFormData;
           setIsDirty(JSON.stringify(next) !== JSON.stringify(orig));
@@ -66,11 +83,15 @@ export default function ItemForm() {
           setIsDirty(
             next.sku !== '' ||
               next.name !== '' ||
+              next.category !== '' ||
               next.sellingPrice !== 0 ||
               next.gstRate !== 18 ||
               next.unit !== 'PCS' ||
               next.openingStock !== 0 ||
-              next.currentStock !== 0
+              next.currentStock !== 0 ||
+              next.reorderLevel !== 0 ||
+              next.description !== '' ||
+              next.imageUrl !== ''
           );
         }
         return next;
@@ -78,6 +99,18 @@ export default function ItemForm() {
     },
     [isEdit, existing]
   );
+
+  const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+        setForm((prev) => ({ ...prev, imageUrl: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  }, []);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
@@ -92,7 +125,6 @@ export default function ItemForm() {
         setError('SKU / Item Code is required.');
         return;
       }
-      // Duplicate SKU check (excluding self when editing)
       const skuExists = items.some(
         (i) => i.sku.toLowerCase() === form.sku.toLowerCase() && i.id !== id
       );
@@ -120,7 +152,6 @@ export default function ItemForm() {
     [items, id, isEdit, existing, form, addItem, updateItem, navigate]
   );
 
-  // Warn if navigating away with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isDirty) {
@@ -132,31 +163,39 @@ export default function ItemForm() {
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isDirty]);
 
-  // Edit mode: item not found (may have been deleted)
   if (isEdit && !loading && !existing) {
     return (
-      <div className="max-w-2xl bg-white p-6 rounded-lg border border-red-200">
-        <h1 className="text-2xl font-bold text-gray-900">Item Not Found</h1>
-        <p className="text-gray-600 mt-2">
-          The item you are trying to edit no longer exists.
-        </p>
-        <Link
-          to="/items"
-          className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
-        >
-          Back to Items
-        </Link>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Item Not Found</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 mt-2">
+            The item you are trying to edit no longer exists.
+          </p>
+          <Link
+            to="/items"
+            className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+          >
+            Back to Items
+          </Link>
+        </CardContent>
+      </Card>
     );
   }
 
-  // Loading state for edit mode
   if (isEdit && loading && !existing) {
     return (
-      <div className="max-w-2xl bg-white p-6 rounded-lg border border-gray-200">
-        <h1 className="text-2xl font-bold text-gray-900">Loading Item...</h1>
-        <p className="text-gray-600 mt-2">Please wait while we fetch the item details.</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Loading Item...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-gray-600 mt-2">
+            Please wait while we fetch the item details.
+          </p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -177,126 +216,210 @@ export default function ItemForm() {
         </div>
       )}
 
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-lg border border-gray-200 space-y-4 grid grid-cols-1 md:grid-cols-2 gap-4"
-      >
-        <div className="md:col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Item Name *
-          </label>
-          <input
-            type="text"
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.name}
-            onChange={(e) => handleChange('name', e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            SKU / Item Code *
-          </label>
-          <input
-            type="text"
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.sku}
-            onChange={(e) => handleChange('sku', e.target.value.toUpperCase())}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Selling Price *
-          </label>
-          <input
-            type="number"
-            min="0"
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.sellingPrice}
-            onChange={(e) => handleChange('sellingPrice', parseFloat(e.target.value) || 0)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            GST Rate *
-          </label>
-          <select
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.gstRate}
-            onChange={(e) =>
-              handleChange('gstRate', e.target.value as unknown as 0 | 5 | 12 | 18 | 28)
-            }
+      <Card>
+        <CardHeader>
+          <CardTitle>{isEdit ? 'Edit Item' : 'Add New Item'}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={handleSubmit}
+            className="space-y-6"
           >
-            {GST_RATES.map((rate) => (
-              <option key={rate} value={rate}>
-                {rate}%
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Unit *
-          </label>
-          <select
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.unit}
-            onChange={(e) =>
-              handleChange('unit', e.target.value as 'PCS' | 'BOX' | 'KG' | 'etc.')
-            }
-          >
-            {UNITS.map((u) => (
-              <option key={u} value={u}>
-                {u}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Opening Stock
-          </label>
-          <input
-            type="number"
-            step="1"
-            min="0"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.openingStock}
-            onChange={(e) => handleChange('openingStock', parseInt(e.target.value) || 0)}
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Current Stock
-          </label>
-          <input
-            type="number"
-            step="1"
-            min="0"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-            value={form.currentStock}
-            onChange={(e) => handleChange('currentStock', parseInt(e.target.value) || 0)}
-          />
-        </div>
-        <div className="md:col-span-2 flex gap-3">
-          <button
-            type="submit"
-            disabled={!isDirty && isEdit}
-            className={`px-6 py-2 rounded-lg text-sm font-medium transition disabled:opacity-60 ${
-              isDirty || !isEdit
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
-          >
-            {isEdit ? 'Update Item' : 'Save Item'}
-          </button>
-          <Link to="/items" className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition">
-            Cancel
-          </Link>
-        </div>
-      </form>
+            {/* Image Upload Section */}
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <div className="md:col-span-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                    Product Image
+                  </span>
+                </div>
+                <div className="aspect-square w-full border-2 border-dashed border-input rounded-lg flex flex-col items-center justify-center hover:border-primary transition-colors relative group">
+                  {imagePreview ? (
+                    <>
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-full object-cover rounded-lg"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setImagePreview(null);
+                          setForm((prev) => ({ ...prev, imageUrl: '' }));
+                        }}
+                        className="absolute top-2 right-2 bg-destructive text-white rounded-full p-1 hover:bg-destructive/90 transition-colors"
+                        aria-label="Remove image"
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="text-2xl text-gray-400 mb-2">📷</div>
+                      <p className="text-xs text-gray-500 text-center px-4">
+                        Uploaded item Image<br />
+                        <span className="text-gray-400 text-xs">
+                          JPG, PNG up to 2MB
+                        </span>
+                      </p>
+                      <label className="mt-3 text-primary text-sm font-medium cursor-pointer hover:text-primary/90">
+                        Click to upload
+                      </label>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleImageChange}
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Form Fields */}
+              <div className="md:col-span-8 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label>Item Name *</Label>
+                    <Input
+                      required
+                      value={form.name}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('name', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label>SKU / Item Code *</Label>
+                    <Input
+                      required
+                      value={form.sku}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('sku', e.target.value.toUpperCase())}
+                    />
+                  </div>
+                  <div>
+                    <Label>Category</Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CATEGORIES.map((cat) => (
+                          <SelectItem key={cat} value={cat}>
+                            {cat}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <Label>Unit *</Label>
+                    <Select>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {UNITS.map((u) => (
+                          <SelectItem key={u} value={u}>
+                            {u}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <Label>Selling Price *</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      required
+                      value={form.sellingPrice}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('sellingPrice', parseFloat(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label>GST Rate *</Label>
+                    <Select
+                      value={String(form.gstRate)}
+                      onValueChange={(v: string) => handleChange('gstRate', parseInt(v) as 0 | 5 | 12 | 18 | 28)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {GST_RATES.map((rate) => (
+                          <SelectItem key={rate} value={String(rate)}>
+                            {rate}%
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Opening Stock</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={form.openingStock}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('openingStock', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Current Stock</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={form.currentStock}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('currentStock', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div>
+                    <Label>Reorder Level</Label>
+                    <Input
+                      type="number"
+                      step="1"
+                      min="0"
+                      value={form.reorderLevel}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleChange('reorderLevel', parseInt(e.target.value) || 0)}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <Label>Description (Optional)</Label>
+                  <textarea
+                    rows={3}
+                    className="w-full px-3 py-2 border border-input bg-background rounded-md focus:ring-2 focus:ring-ring focus:ring-offset-background outline-none"
+                    value={form.description}
+                    onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('description', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4 border-t border-border">
+              <Button
+                type="submit"
+                disabled={!isDirty && isEdit}
+                className={`px-6 py-2 rounded-lg text-sm font-medium transition disabled:opacity-60 ${
+                  isDirty || !isEdit
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : 'bg-muted text-muted-foreground cursor-not-allowed'
+                }`}
+              >
+                {isEdit ? 'Update Item' : 'Save Item'}
+              </Button>
+              <Link to="/items" className="px-6 py-2 border border-input text-foreground rounded-lg text-sm font-medium hover:bg-accent transition">
+                Cancel
+              </Link>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

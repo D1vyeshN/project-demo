@@ -1,4 +1,7 @@
 import { useItems } from '../hooks/useItems';
+import { Link } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
 export default function LowStockPage() {
   const { items } = useItems();
@@ -13,54 +16,61 @@ export default function LowStockPage() {
         </p>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50">
-                <th className="p-4 font-medium text-gray-600">SKU</th>
-                <th className="p-4 font-medium text-gray-600">Item Name</th>
-                <th className="p-4 font-medium text-gray-600">Unit</th>
-                <th className="p-4 font-medium text-gray-600">Current Stock</th>
-                <th className="p-4 font-medium text-gray-600">Selling Price</th>
-                <th className="p-4 font-medium text-gray-600 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {lowStock.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-6 text-center text-green-600 font-medium">
-                    ✅ All items are well stocked. No low-stock alerts.
-                  </td>
-                </tr>
-              ) : (
-                lowStock.map((it) => (
-                  <tr key={it.id} className="border-b border-gray-100 hover:bg-amber-50">
-                    <td className="p-4 font-medium text-gray-900">{it.sku}</td>
-                    <td className="p-4 text-gray-700">{it.name}</td>
-                    <td className="p-4 text-gray-700">{it.unit}</td>
-                    <td className="p-4 font-semibold text-red-700">{it.currentStock}</td>
-                    <td className="p-4 text-gray-700">
-                      {it.sellingPrice.toLocaleString(undefined, {
-                        style: 'currency',
-                        currency: 'INR',
-                      })}
-                    </td>
-                    <td className="p-4 text-right">
-                      <a
-                        href={`/items/${it.id}/edit`}
-                        className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
-                      >
-                        Restock
-                      </a>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Low Stock Items</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>SKU</TableHead>
+                  <TableHead>Item Name</TableHead>
+                  <TableHead className="text-center">Unit</TableHead>
+                  <TableHead className="text-right">Current Stock</TableHead>
+                  <TableHead className="text-right">Selling Price</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lowStock.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center text-green-600 font-medium">
+                      ✅ All items are well stocked. No low-stock alerts.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  lowStock.map((it) => (
+                    <TableRow key={it.id}>
+                      <TableCell className="font-medium">{it.sku}</TableCell>
+                      <TableCell>{it.name}</TableCell>
+                      <TableCell className="text-center">{it.unit}</TableCell>
+                      <TableCell className="text-right font-semibold text-red-700">
+                        {it.currentStock}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {it.sellingPrice.toLocaleString(undefined, {
+                          style: 'currency',
+                          currency: 'INR',
+                        })}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link
+                          to={`/items/${it.id}/edit`}
+                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                        >
+                          Restock
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

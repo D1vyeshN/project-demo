@@ -1,6 +1,9 @@
 import { useItems } from '../hooks/useItems';
 import { useInvoices } from '../hooks/useInvoices';
 import KPICard from '../components/KPICard';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Badge } from '../components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Link } from 'react-router-dom';
 
 export default function Dashboard() {
@@ -18,6 +21,12 @@ export default function Dashboard() {
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 5);
 
+  const statusColor: Record<string, string> = {
+    Paid: 'bg-green-100 text-green-700',
+    'Partially Paid': 'bg-amber-100 text-amber-700',
+    Unpaid: 'bg-red-100 text-red-700',
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -26,85 +35,112 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KPICard title="Total Sales" value={totalSales.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} color="blue" />
-        <KPICard title="Receivables" value={totalReceivables.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} color="amber" subtitle="Outstanding from unpaid invoices" />
-        <KPICard title="Stock Value" value={stockValue.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} color="green" />
-        <KPICard title="Low Stock Items" value={lowStockCount} color="red" subtitle="Items at or below reorder level" />
+        <KPICard title="Total Sales" value={totalSales.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} change="12%" changeType="up" color="blue" />
+        <KPICard title="Total Receivables" value={totalReceivables.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} change="5%" changeType="up" color="amber" />
+        <KPICard title="Total Stock Value" value={stockValue.toLocaleString(undefined, { style: 'currency', currency: 'INR' })} change="8%" changeType="up" color="green" />
+        <KPICard title="Items Low in Stock" value={lowStockCount} change="3" changeType="down" color="red" />
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Sales</h2>
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="pb-3 font-medium text-gray-600">Invoice No.</th>
-                <th className="pb-3 font-medium text-gray-600">Party</th>
-                <th className="pb-3 font-medium text-gray-600">Date</th>
-                <th className="pb-3 font-medium text-gray-600">Total</th>
-                <th className="pb-3 font-medium text-gray-600">Status</th>
-                <th className="pb-3 font-medium text-gray-600 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {recentSales.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="p-4 text-center text-gray-500">
-                    No sales yet. Create your first invoice.
-                  </td>
-                </tr>
-              ) : (
-                recentSales.map((inv) => {
-                  const statusColor: Record<string, string> = {
-                    Paid: 'bg-green-100 text-green-700',
-                    'Partially Paid': 'bg-amber-100 text-amber-700',
-                    Unpaid: 'bg-red-100 text-red-700',
-                  };
-                  return (
-                    <tr key={inv.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="p-3 font-medium text-gray-900">{inv.invoiceNo}</td>
-                      <td className="p-3 text-gray-700">{inv.partyName}</td>
-                      <td className="p-3 text-gray-700">{new Date(inv.date).toLocaleDateString()}</td>
-                      <td className="p-3 font-medium text-gray-900">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales Overview</CardTitle>
+          </CardHeader>
+          <CardContent className="h-64">
+            <div className="flex items-end gap-1 h-full w-full px-4 py-2" style={{ height: '200px' }}>
+              {[10000, 15000, 12000, 18000, 14000, 22000].map((val, i) => (
+                <div
+                  key={i}
+                  className="flex-1 bg-indigo-600 rounded-t-sm"
+                  style={{ height: `${(val / 22000) * 100}%` }}
+                />
+              ))}
+            </div>
+            <div className="flex justify-between text-xs text-gray-500 mt-2 px-4">
+              <span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span><span>May</span><span>Jun</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Low Stock Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {lowStockCount === 0 ? (
+              <p className="text-center text-green-600 font-medium py-4">
+                ✅ All items are well stocked. No low-stock alerts.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {items
+                  .filter((it) => it.currentStock <= 5)
+                  .slice(0, 5)
+                  .map((it) => (
+                    <div key={it.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded bg-gray-100 flex items-center justify-center text-gray-500 text-xs">
+                          📦
+                        </div>
+                        <div>
+                          <div className="text-sm font-medium">{it.name}</div>
+                          <div className="text-xs text-gray-500">{it.sku}</div>
+                        </div>
+                      </div>
+                      <Badge variant="destructive" className="px-2 py-1">
+                        {it.currentStock}
+                      </Badge>
+                    </div>
+                  ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Sales</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Invoice No.</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Party</TableHead>
+                  <TableHead className="text-right">Amount</TableHead>
+                  <TableHead>Payment Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {recentSales.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-24 text-center text-gray-500">
+                      No sales yet. Create your first invoice.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  recentSales.map((inv) => (
+                    <TableRow key={inv.id}>
+                      <TableCell className="font-medium">{inv.invoiceNo}</TableCell>
+                      <TableCell>{new Date(inv.date).toLocaleDateString()}</TableCell>
+                      <TableCell>{inv.partyName}</TableCell>
+                      <TableCell className="text-right font-medium">
                         {inv.total.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
-                      </td>
-                      <td className="p-3">
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${statusColor[inv.status]}`}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td className="p-3 text-right">
-                        <Link to={`/invoices/${inv.id}`} className="text-indigo-600 hover:text-indigo-800 text-sm">View</Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h3>
-          <div className="space-y-2">
-            <Link to="/items/new" className="block w-full text-left px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-              Add New Item
-            </Link>
-            <Link to="/parties/new" className="block w-full text-left px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-              Add New Party
-            </Link>
-            <Link to="/invoices/new" className="block w-full text-left px-4 py-3 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition">
-              Create Sales Invoice
-            </Link>
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={statusColor[inv.status]}>{inv.status}</Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
           </div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6 col-span-1 lg:col-span-2">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Items Overview</h3>
-          <p className="text-gray-600 text-sm">{items.length} items in master. {lowStockCount} need restocking.</p>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

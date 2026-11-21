@@ -8,11 +8,15 @@ export interface Item {
   id: string;
   sku: string;
   name: string;
+  category?: string;
   sellingPrice: number;
   gstRate: GSTRate;
   unit: Unit;
   openingStock: number;
   currentStock: number;
+  reorderLevel?: number;
+  description?: string;
+  imageUrl?: string;
   createdAt: string;
   updatedAt: string;
 }

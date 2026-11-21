@@ -8,6 +8,7 @@ import type {
 
 export const GST_RATES: GSTRate[] = [0, 5, 12, 18, 28];
 export const UNITS: Unit[] = ['PCS', 'BOX', 'KG', 'etc.'];
+export const CATEGORIES: string[] = ['Electronics', 'Accessories', 'Furniture', 'Groceries', 'Stationery', 'Other'];
 export const PAYMENT_MODES: PaymentMode[] = ['Cash', 'Bank', 'UPI', 'etc.'];
 export const INVOICE_STATUSES: InvoiceStatus[] = ['Paid', 'Partially Paid', 'Unpaid'];
 export const STOCK_MOVEMENT_TYPES: StockMovementType[] = [
