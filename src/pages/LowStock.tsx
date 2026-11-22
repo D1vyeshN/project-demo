@@ -1,5 +1,5 @@
 import { useItems } from '../hooks/useItems';
-import { Link } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
@@ -8,7 +8,7 @@ export default function LowStockPage() {
   const lowStock = items.filter((it) => it.currentStock <= 5);
 
   return (
-    <div className="space-y-6">
+    <div className="pb-10 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Low Stock Alert</h1>
         <p className="text-gray-600">
@@ -25,43 +25,29 @@ export default function LowStockPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>SKU</TableHead>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead className="text-center w-16">Unit</TableHead>
+                  <TableHead className="w-10">⚠</TableHead>
+                  <TableHead>Item</TableHead>
                   <TableHead className="text-right w-24">Current Stock</TableHead>
-                  <TableHead className="text-right w-24">Selling Price</TableHead>
-                  <TableHead className="text-right w-24">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {lowStock.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-green-600 font-medium">
+                    <TableCell colSpan={3} className="h-24 text-center text-green-600 font-medium">
                       ✅ All items are well stocked. No low-stock alerts.
                     </TableCell>
                   </TableRow>
                 ) : (
                   lowStock.map((it) => (
                     <TableRow key={it.id}>
-                      <TableCell className="font-medium">{it.sku}</TableCell>
-                      <TableCell>{it.name}</TableCell>
-                      <TableCell className="text-center">{it.unit}</TableCell>
+                      <TableCell className="text-center text-red-600">
+                        <AlertTriangle className="h-4 w-4" />
+                      </TableCell>
+                      <TableCell className="font-medium text-gray-900">
+                        {it.name}
+                      </TableCell>
                       <TableCell className="text-right font-semibold text-red-700">
                         {it.currentStock}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {it.sellingPrice.toLocaleString(undefined, {
-                          style: 'currency',
-                          currency: 'INR',
-                        })}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Link
-                          to={`/items/${it.id}/edit`}
-                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
-                        >
-                          Restock
-                        </Link>
                       </TableCell>
                     </TableRow>
                   ))
@@ -74,4 +60,3 @@ export default function LowStockPage() {
     </div>
   );
 }
-

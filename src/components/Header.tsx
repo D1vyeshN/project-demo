@@ -77,7 +77,7 @@ export default function Header() {
             <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center text-white">
               <Package className="w-4 h-4" />
             </div>
-            <span>HisaabKitaab</span>
+            <span>HisabKitab</span>
           </Link>
         </div>
 
@@ -121,7 +121,7 @@ export default function Header() {
             </div>
             <div>
               <div className="text-sm font-medium text-foreground">Admin</div>
-              <div className="text-xs text-muted-foreground">admin@hisaabkitaab.com</div>
+              <div className="text-xs text-muted-foreground">admin@hisabkitab.com</div>
             </div>
           </div>
         </div>

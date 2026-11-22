@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertTriangle,
   ChevronDown,
@@ -19,6 +19,7 @@ import {
 } from '../lib/invoiceCalc';
 import type {
   GSTRate,
+  Invoice,
   InvoiceItem,
   InvoiceStatus,
   Item,
@@ -74,13 +75,23 @@ const statusStyles: Record<InvoiceStatus, string> = {
 export default function InvoiceForm() {
   const { items, setItems } = useItems();
   const { parties, getParty, updateParty } = useParties();
-  const { invoices, movements, addInvoice, setMovements } = useInvoices();
+  const { invoices, movements, addInvoice, setMovements, updateInvoice } =
+    useInvoices();
   const navigate = useNavigate();
+  const { id: invoiceId } = useParams<{ id: string }>();
+
+  // Edit mode: load an existing invoice to prefill the form
+  const [invoice, setInvoice] = useState<Invoice | null>(null);
+  const [loadingInvoice, setLoadingInvoice] = useState(false);
+  const isEdit = Boolean(invoiceId);
 
   const [party, setParty] = useState<Party | null>(null);
   const [invoiceDate, setInvoiceDate] = useState(() =>
     toDateInputValue(new Date())
   );
+  // Due date defaults to the invoice date (same-day terms) until edited
+  const [dueDate, setDueDate] = useState(invoiceDate);
+  const [dueDateTouched, setDueDateTouched] = useState(false);
   const [invoiceLines, setInvoiceLines] = useState<InvoiceItem[]>([]);
   const [paymentMode, setPaymentMode] = useState<PaymentMode>('None');
   const [amountReceived, setAmountReceived] = useState(0);
@@ -98,7 +109,10 @@ export default function InvoiceForm() {
   const itemBoxRef = useRef<HTMLDivElement>(null);
   const itemSearchRef = useRef<HTMLInputElement>(null);
 
-  const invoiceNo = useMemo(() => nextInvoiceNo(invoices), [invoices]);
+  const invoiceNo = useMemo(
+    () => (isEdit && invoice ? invoice.invoiceNo : nextInvoiceNo(invoices)),
+    [isEdit, invoice, invoices]
+  );
   const { subtotal, discount, taxableAmount, gst, total } =
     calcInvoice(invoiceLines);
 
@@ -122,6 +136,20 @@ export default function InvoiceForm() {
     return () => document.removeEventListener('mousedown', onMouseDown);
   }, []);
 
+  // Load invoice when in edit mode
+  useEffect(() => {
+    if (!isEdit) return;
+    setLoadingInvoice(true);
+    setInvoice(null);
+    const inv = invoices.find((i) => i.id === invoiceId);
+    if (inv) {
+      setInvoice(inv);
+      setLoadingInvoice(false);
+    } else {
+      setLoadingInvoice(false);
+    }
+  }, [isEdit, invoiceId, invoices]);
+
   const partyQuery = partySearch.trim().toLowerCase();
   const filteredParties = useMemo(
     () =>
@@ -134,6 +162,20 @@ export default function InvoiceForm() {
       ),
     [parties, partyQuery]
   );
+
+  // Prefill form from loaded invoice (edit mode)
+  useEffect(() => {
+    if (!invoice) return;
+    const p = parties.find((party) => party.id === invoice.partyId) || null;
+    setParty(p);
+    setInvoiceDate(toDateInputValue(new Date(invoice.date)));
+    setDueDate(invoice.dueDate ? toDateInputValue(new Date(invoice.dueDate)) : toDateInputValue(new Date(invoice.date)));
+    setDueDateTouched(Boolean(invoice.dueDate));
+    setInvoiceLines([...invoice.items]);
+    setPaymentMode(invoice.paymentMode);
+    setAmountReceived(invoice.amountReceived);
+    setPaymentRef(invoice.paymentRef ?? '');
+  }, [invoice, parties]);
 
   const itemQuery = itemSearch.trim().toLowerCase();
   const filteredItems = useMemo(
@@ -156,17 +198,6 @@ export default function InvoiceForm() {
     }
     return usage;
   }, [invoiceLines]);
-
-  const stockErrors = useMemo(() => {
-    const errors: { item: Item; entered: number }[] = [];
-    for (const [itemId, entered] of stockUsage) {
-      const item = items.find((i) => i.id === itemId);
-      if (item && entered > item.currentStock) {
-        errors.push({ item, entered });
-      }
-    }
-    return errors;
-  }, [stockUsage, items]);
 
   const selectParty = (selected: Party) => {
     setParty(selected);
@@ -236,8 +267,26 @@ export default function InvoiceForm() {
 
   const handleCancel = () => {
     if (isDirty && !window.confirm('Discard this invoice?')) return;
-    navigate('/sales/invoices');
+    navigate(isEdit ? `/sales/invoices/${invoiceId}` : '/sales/invoices');
   };
+
+  const stockErrors = useMemo(() => {
+    const errors: { item: Item; entered: number }[] = [];
+    for (const [itemId, entered] of stockUsage) {
+      const item = items.find((i) => i.id === itemId);
+      if (!item) continue;
+      // In edit mode, add back the old qty so we don't double-count this invoice's lines
+      let available = item.currentStock;
+      if (isEdit && invoice) {
+        const oldLine = invoice.items.find((l) => l.itemId === itemId);
+        if (oldLine) available += oldLine.qty;
+      }
+      if (entered > available) {
+        errors.push({ item, entered });
+      }
+    }
+    return errors;
+  }, [stockUsage, items, isEdit, invoice]);
 
   const handleSave = () => {
     setError('');
@@ -271,57 +320,142 @@ export default function InvoiceForm() {
     }
 
     const dateISO = new Date(`${invoiceDate}T12:00:00`).toISOString();
+    const dueDateISO = dueDate
+      ? new Date(`${dueDate}T12:00:00`).toISOString()
+      : undefined;
     const now = new Date().toISOString();
 
-    const saved = addInvoice({
-      invoiceNo,
-      date: dateISO,
-      partyId: party.id,
-      partyName: party.name,
-      items: invoiceLines,
-      subtotal,
-      discount,
-      taxableAmount,
-      gst,
-      total,
-      paymentMode,
-      amountReceived,
-      status,
-      paymentRef: paymentRef.trim() || undefined,
-    });
+    if (isEdit && invoice) {
+      // Reverse old stock deduction, then apply new
+      const nextItems = items.map((i) => ({ ...i }));
+      for (const oldLine of invoice.items) {
+        const idx = nextItems.findIndex((i) => i.id === oldLine.itemId);
+        if (idx >= 0) {
+          nextItems[idx].currentStock += oldLine.qty;
+        }
+      }
+      const newMovements: StockMovement[] = [];
+      for (const line of invoiceLines) {
+        const idx = nextItems.findIndex((i) => i.id === line.itemId);
+        if (idx >= 0) {
+          nextItems[idx].currentStock -= line.qty;
+          newMovements.push({
+            id: generateId(),
+            itemId: line.itemId,
+            type: 'Sales',
+            qty: -line.qty,
+            refId: invoice.id,
+            date: now,
+            balance: nextItems[idx].currentStock,
+          });
+        }
+      }
+      setItems(nextItems);
+      if (newMovements.length > 0) {
+        setMovements([...movements, ...newMovements]);
+      }
 
-    // Deduct stock and record movements
-    const nextItems = items.map((i) => ({ ...i }));
-    const newMovements: StockMovement[] = [];
-
-    for (const line of invoiceLines) {
-      const item = nextItems.find((i) => i.id === line.itemId);
-      if (!item) continue;
-      item.currentStock -= line.qty;
-      newMovements.push({
-        id: generateId(),
-        itemId: line.itemId,
-        type: 'Sales',
-        qty: -line.qty,
-        refId: saved.id,
-        date: now,
-        balance: item.currentStock,
+      // Party outstanding: remove old contribution, add new
+      const latestParty = getParty(party.id) ?? party;
+      const oldContribution = invoice.total - invoice.amountReceived;
+      const newContribution = total - amountReceived;
+      updateParty(party.id, {
+        currentOutstanding:
+          latestParty.currentOutstanding - oldContribution + newContribution,
       });
+
+      const updates = {
+        date: dateISO,
+        dueDate: dueDateISO,
+        partyId: party.id,
+        partyName: party.name,
+        items: invoiceLines,
+        subtotal,
+        discount,
+        taxableAmount,
+        gst,
+        total,
+        paymentMode,
+        amountReceived,
+        status,
+        paymentRef: paymentRef.trim() || undefined,
+      };
+      updateInvoice(invoice.id, updates);
+      navigate(`/sales/invoices/${invoice.id}`);
+    } else {
+      const saved = addInvoice({
+        invoiceNo,
+        date: dateISO,
+        dueDate: dueDateISO,
+        partyId: party.id,
+        partyName: party.name,
+        items: invoiceLines,
+        subtotal,
+        discount,
+        taxableAmount,
+        gst,
+        total,
+        paymentMode,
+        amountReceived,
+        status,
+        paymentRef: paymentRef.trim() || undefined,
+      });
+
+      // Deduct stock and record movements
+      const nextItems = items.map((i) => ({ ...i }));
+      const newMovements: StockMovement[] = [];
+
+      for (const line of invoiceLines) {
+        const item = nextItems.find((i) => i.id === line.itemId);
+        if (!item) continue;
+        item.currentStock -= line.qty;
+        newMovements.push({
+          id: generateId(),
+          itemId: line.itemId,
+          type: 'Sales',
+          qty: -line.qty,
+          refId: saved.id,
+          date: now,
+          balance: item.currentStock,
+        });
+      }
+
+      setItems(nextItems);
+      if (newMovements.length > 0) {
+        setMovements([...movements, ...newMovements]);
+      }
+
+      const latestParty = getParty(party.id) ?? party;
+      updateParty(party.id, {
+        currentOutstanding:
+          latestParty.currentOutstanding + total - amountReceived,
+      });
+
+      navigate(`/sales/invoices/${saved.id}`);
     }
-
-    setItems(nextItems);
-    if (newMovements.length > 0) {
-      setMovements([...movements, ...newMovements]);
-    }
-
-    const latestParty = getParty(party.id) ?? party;
-    updateParty(party.id, {
-      currentOutstanding:
-        latestParty.currentOutstanding + total - amountReceived,
-    });
-
-    navigate(`/sales/invoices/${saved.id}`);
   };
+
+  // Edit mode guards
+  if (loadingInvoice) {
+    return <div className="pb-10 p-4 text-gray-500">Loading invoice...</div>;
+  }
+  if (isEdit && !invoice) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Invoice Not Found</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Link
+            to="/sales/invoices"
+            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          >
+            Back to Invoices
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="pb-10">
@@ -329,22 +463,11 @@ export default function InvoiceForm() {
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
-            Create Sales Invoice
+            {isEdit ? `Edit Sales Invoice — ${invoiceNo}` : 'Create Sales Invoice'}
           </h1>
           <p className="mt-1 text-sm text-gray-500">
             Select a party, add items and record the payment.
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={handleCancel}>
-            Cancel
-          </Button>
-          <Button
-            className="bg-blue-600 hover:bg-blue-700"
-            onClick={handleSave}
-          >
-            Save Invoice
-          </Button>
         </div>
       </div>
 
@@ -473,7 +596,11 @@ export default function InvoiceForm() {
                   id="invoiceDate"
                   type="date"
                   value={invoiceDate}
-                  onChange={(e) => setInvoiceDate(e.target.value)}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setInvoiceDate(value);
+                    if (!dueDateTouched) setDueDate(value);
+                  }}
                 />
               </div>
               <div>
@@ -486,6 +613,24 @@ export default function InvoiceForm() {
                   value={invoiceNo}
                   className="bg-gray-50 text-gray-600"
                 />
+              </div>
+              <div className="sm:col-span-2">
+                <Label htmlFor="dueDate" className="mb-1.5 block">
+                  Payment Due Date
+                </Label>
+                <Input
+                  id="dueDate"
+                  type="date"
+                  min={invoiceDate}
+                  value={dueDate}
+                  onChange={(e) => {
+                    setDueDate(e.target.value);
+                    setDueDateTouched(true);
+                  }}
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Defaults to the invoice date (same-day payment terms).
+                </p>
               </div>
             </div>
           </div>
@@ -764,162 +909,183 @@ export default function InvoiceForm() {
         </CardContent>
       </Card>
 
-      {/* Payment + summary */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="pb-4">
-            <CardTitle className="text-lg">Payment Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Invoice Amount
-                </p>
-                <p className="mt-1 text-base font-semibold text-gray-900">
-                  {formatINR(total)}
-                </p>
+      {/* Payment + summary (shown only when items added) */}
+      {invoiceLines.length > 0 ? (
+        <div className="grid gap-5 lg:grid-cols-12">
+          {/* Payment Details */}
+          <Card className="lg:col-span-8">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">
+                Payment Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Row 1: Invoice Amount + Previous Outstanding */}
+              <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
+                <div>
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Invoice Amount
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-gray-900">
+                    {formatINR(total)}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Previous Outstanding
+                  </p>
+                  <p className="mt-1 text-lg font-bold text-amber-600">
+                    {formatINR(previousOutstanding)}
+                  </p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Discount
-                </p>
-                <p className="mt-1 text-base font-semibold text-gray-900">
-                  −{formatINR(discount)}
-                </p>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {/* Row 2: Amount Received + Payment Mode */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="amountReceived" className="mb-1.5 block">
+                    Amount Received <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="amountReceived"
+                    type="number"
+                    min={0}
+                    step="0.01"
+                    value={amountReceived}
+                    onChange={(e) => {
+                      setAmountReceived(parseFloat(e.target.value) || 0);
+                      setError('');
+                    }}
+                    className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  />
+                </div>
+                <div>
+                  <Label className="mb-1.5 block">Payment Mode</Label>
+                  <Select
+                    value={paymentMode}
+                    onValueChange={(value) =>
+                      setPaymentMode(value as PaymentMode)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue>{paymentMode}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {PAYMENT_MODES.map((mode) => (
+                        <SelectItem key={mode} value={mode}>
+                          {mode}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Row 3: Reference No */}
               <div>
-                <Label htmlFor="amountReceived" className="mb-1.5 block">
-                  Amount Received <span className="text-red-500">*</span>
+                <Label htmlFor="paymentRef" className="mb-1.5 block">
+                  Reference No (Optional)
                 </Label>
                 <Input
-                  id="amountReceived"
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={amountReceived}
-                  onChange={(e) => {
-                    setAmountReceived(parseFloat(e.target.value) || 0);
-                    setError('');
-                  }}
-                  className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                  id="paymentRef"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  placeholder="e.g. UPI / cheque reference"
                 />
               </div>
-              <div>
-                <Label className="mb-1.5 block">Payment Mode</Label>
-                <Select
-                  value={paymentMode}
-                  onValueChange={(value) =>
-                    setPaymentMode(value as PaymentMode)
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue>{paymentMode}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PAYMENT_MODES.map((mode) => (
-                      <SelectItem key={mode} value={mode}>
-                        {mode}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+              {/* Row 4: Status + Invoice Due */}
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Status</span>
+                  <Badge className={statusStyles[status]}>{status}</Badge>
+                </div>
+                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-right">
+                  <p className="text-xs font-medium text-blue-700">Invoice Due</p>
+                  <p className="text-xl font-bold text-blue-700">
+                    {formatINR(balanceDue)}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <div>
-              <Label htmlFor="paymentRef" className="mb-1.5 block">
-                Reference No (Optional)
-              </Label>
-              <Input
-                id="paymentRef"
-                value={paymentRef}
-                onChange={(e) => setPaymentRef(e.target.value)}
-                placeholder="e.g. UPI / cheque reference"
-              />
-            </div>
-
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-500">Status</span>
-                <Badge className={statusStyles[status]}>{status}</Badge>
+              {/* Row 5: Total Outstanding After Invoice */}
+              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-green-800">
+                      Total Outstanding After Invoice
+                    </p>
+                    <p className="text-xs text-green-700">
+                      Previous outstanding + Invoice total − Amount received
+                    </p>
+                  </div>
+                  <p className="text-xl font-bold text-green-700">
+                    {formatINR(outstandingAfter)}
+                  </p>
+                </div>
               </div>
-              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-right">
-                <p className="text-xs font-medium text-blue-700">Balance Due</p>
-                <p className="text-xl font-bold text-blue-700">
-                  {formatINR(balanceDue)}
-                </p>
+            </CardContent>
+          </Card>
+
+          {/* Invoice Summary */}
+          <Card className="lg:col-span-4 self-start lg:sticky lg:top-20">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">
+                Invoice Summary
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+                <span className="text-gray-600">Subtotal</span>
+                <span className="font-medium text-gray-900">
+                  {formatINR(subtotal)}
+                </span>
               </div>
-            </div>
-
-            <div className="flex flex-col gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm font-semibold text-green-800">
-                  Total Outstanding After Balance
-                </p>
-                <p className="text-xs text-green-700">
-                  Previous outstanding + Invoice total − Amount received
-                </p>
+              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+                <span className="text-gray-600">Discount (−)</span>
+                <span className="font-medium text-gray-900">
+                  −{formatINR(discount)}
+                </span>
               </div>
-              <p className="text-xl font-bold text-green-700">
-                {formatINR(outstandingAfter)}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+                <span className="text-gray-600">Taxable Amount</span>
+                <span className="font-medium text-gray-900">
+                  {formatINR(taxableAmount)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+                <span className="text-gray-600">GST</span>
+                <span className="font-medium text-gray-900">
+                  {formatINR(gst)}
+                </span>
+              </div>
+              <div className="mt-3 flex items-center justify-between rounded-md bg-blue-100 px-3 py-3">
+                <span className="text-base font-semibold text-gray-900">
+                  Invoice Total
+                </span>
+                <span className="text-xl font-bold text-blue-800">
+                  {formatINR(total)}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      ) : (
+        <div className="text-center py-5 text-gray-500">
+          <p className="text-xs mt-1">Add items above to see payment details and summary.</p>
+        </div>
+      )}
 
-        <Card className="self-start lg:sticky lg:top-20">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Invoice Summary</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-              <span className="text-gray-600">Subtotal</span>
-              <span className="font-medium text-gray-900">
-                {formatINR(subtotal)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-              <span className="text-gray-600">Discount (−)</span>
-              <span className="font-medium text-gray-900">
-                {formatINR(discount)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-              <span className="text-gray-600">Taxable Amount</span>
-              <span className="font-medium text-gray-900">
-                {formatINR(taxableAmount)}
-              </span>
-            </div>
-            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-              <span className="text-gray-600">GST</span>
-              <span className="font-medium text-gray-900">
-                {formatINR(gst)}
-              </span>
-            </div>
-            <div className="mt-3 flex items-center justify-between rounded-md bg-blue-100 px-3 py-3">
-              <span className="text-base font-semibold text-gray-900">
-                Invoice Total
-              </span>
-              <span className="text-xl font-bold text-blue-800">
-                {formatINR(total)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="mt-5 flex justify-end gap-2">
-        <Button variant="outline" onClick={handleCancel}>
-          Cancel
-        </Button>
-        <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
-          Save Invoice
-        </Button>
-      </div>
+      {invoiceLines.length > 0 && (
+        <div className="mt-5 flex justify-end gap-2">
+          <Button variant="outline" onClick={handleCancel}>
+            Cancel
+          </Button>
+          <Button className="bg-blue-600 hover:bg-blue-700" onClick={handleSave}>
+            {isEdit ? 'Save Changes' : 'Save Invoice'}
+          </Button>
+        </div>
+      )}
 
       <PartyModal
         open={partyModalOpen}

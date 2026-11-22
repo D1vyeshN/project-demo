@@ -163,7 +163,7 @@ export default function SidebarComponent() {
             H
           </div>
           <span className={`font-bold text-lg tracking-tight ${collapsed ? 'hidden' : 'block'}`}>
-            HisaabKitaab
+            HisabKitab
           </span>
         </div>
 
@@ -254,7 +254,7 @@ export default function SidebarComponent() {
             </div>
             <div className={collapsed ? 'hidden' : 'block'}>
               <div className="text-sm font-medium text-gray-900">Admin</div>
-              <div className="text-xs text-gray-500">admin@hisaabkitaab.com</div>
+              <div className="text-xs text-gray-500">admin@hisabkitab.com</div>
             </div>
           </div>
         </div>

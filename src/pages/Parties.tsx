@@ -16,21 +16,30 @@ const PAGE_SIZE = 5;
 const FILTER_SELECT_CLASS =
   'h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
+/** Party status is derived from the outstanding balance (mockup screen 4) */
+const partyStatus = (outstanding: number) =>
+  outstanding > 0 ? 'Active' : 'Inactive';
+
+const PARTY_STATUSES = ['Active', 'Inactive'] as const;
+
 export default function PartiesPage() {
   const { parties, loading, deleteParty } = useParties();
   const { invoices } = useInvoices();
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All Status');
   const [page, setPage] = useState(1);
   const [partyModalOpen, setPartyModalOpen] = useState(false);
   const [editingPartyId, setEditingPartyId] = useState<string | undefined>(undefined);
 
   const filtered = parties.filter((p) => {
     const q = search.toLowerCase();
-    return (
+    const matchesSearch =
       p.name.toLowerCase().includes(q) ||
       p.phone.includes(search) ||
-      (p.gstin || '').toLowerCase().includes(q)
-    );
+      (p.gstin || '').toLowerCase().includes(q);
+    const matchesStatus =
+      statusFilter === 'All Status' || partyStatus(p.currentOutstanding) === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
   // Real client-side pagination (mockup: "Showing 1 to 5 of 10 parties" + ‹ 1 2 3 ›)
@@ -87,10 +96,15 @@ export default function PartiesPage() {
             />
           </div>
           <select
-            aria-label="Filter by state"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter by status"
             className={FILTER_SELECT_CLASS}
           >
-            <option>All States</option>
+            <option>All Status</option>
+            {PARTY_STATUSES.map((status) => (
+              <option key={status}>{status}</option>
+            ))}
           </select>
         </CardHeader>
         <CardContent className="flex-1 flex flex-col overflow-hidden">
@@ -136,15 +150,13 @@ export default function PartiesPage() {
                         <TableCell className="text-center">
                           <Badge
                             className={cn(
-                              p.currentOutstanding > 0
-                                ? 'border-red-200 bg-red-100 text-red-700'
-                                : p.currentOutstanding < 0
-                                  ? 'border-amber-200 bg-amber-100 text-amber-700'
-                                  : 'border-gray-200 bg-gray-100 text-gray-700',
+                              partyStatus(p.currentOutstanding) === 'Active'
+                                ? 'border-green-200 bg-green-100 text-green-700'
+                                : 'border-gray-200 bg-gray-100 text-gray-700',
                               'px-2 py-1'
                             )}
                           >
-                            {p.currentOutstanding > 0 ? 'Due' : p.currentOutstanding < 0 ? 'Credit' : 'Cleared'}
+                            {partyStatus(p.currentOutstanding)}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">

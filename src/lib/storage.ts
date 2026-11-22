@@ -1,4 +1,12 @@
-import type { Item, Party, Invoice, StockMovement } from './types';
+import type {
+  Item,
+  Party,
+  Invoice,
+  StockMovement,
+  Purchase,
+  Payment,
+  Return,
+} from './types';
 import { STORAGE_KEYS } from './constants';
 
 export { STORAGE_KEYS };
@@ -8,6 +16,9 @@ type StorageMap = {
   [STORAGE_KEYS.PARTIES]: Party[];
   [STORAGE_KEYS.INVOICES]: Invoice[];
   [STORAGE_KEYS.STOCK_MOVEMENTS]: StockMovement[];
+  [STORAGE_KEYS.PURCHASES]: Purchase[];
+  [STORAGE_KEYS.PAYMENTS]: Payment[];
+  [STORAGE_KEYS.RETURNS]: Return[];
 };
 
 export function getStorage<K extends keyof StorageMap>(

@@ -176,7 +176,15 @@ export default function PartyModal({ open, onOpenChange, partyId, onSaved }: Par
                 />
               </div>
               <div>
-                <Label className="mb-1.5 block">Opening Outstanding Balance</Label>
+                <Label className="mb-1.5 block">
+                  Opening Outstanding Balance{' '}
+                  <span
+                    className="ml-0.5 inline-flex h-3.5 w-3.5 cursor-help items-center justify-center rounded-full border border-gray-400 text-[9px] font-medium text-gray-500"
+                    title="Carried-forward balance from previous dues. It is included in the party's total outstanding."
+                  >
+                    ?
+                  </span>
+                </Label>
                 <Input
                   type="number"
                   step="0.01"

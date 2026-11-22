@@ -8,7 +8,6 @@ import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Plus, Edit2, Trash2, Search as SearchIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { UNITS } from '../lib/constants';
 import ItemModal from '../components/ItemModal';
 
 const PAGE_SIZE = 5;
@@ -16,12 +15,14 @@ const PAGE_SIZE = 5;
 const FILTER_SELECT_CLASS =
   'h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
+const STOCK_STATUSES = ['In Stock', 'Out of Stock'] as const;
+
 export default function ItemsPage() {
   const { items, loading, deleteItem } = useItems();
   const { invoices } = useInvoices();
   const [search, setSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All Categories');
-  const [unitFilter, setUnitFilter] = useState('All Units');
+  const [statusFilter, setStatusFilter] = useState('All Status');
   const [page, setPage] = useState(1);
   const [itemModalOpen, setItemModalOpen] = useState(false);
   const [editingItemId, setEditingItemId] = useState<string | undefined>(undefined);
@@ -36,8 +37,9 @@ export default function ItemsPage() {
       (it.category || '').toLowerCase().includes(q);
     const matchesCategory =
       categoryFilter === 'All Categories' || it.category === categoryFilter;
-    const matchesUnit = unitFilter === 'All Units' || it.unit === unitFilter;
-    return matchesSearch && matchesCategory && matchesUnit;
+    const stockStatus = it.currentStock === 0 ? 'Out of Stock' : 'In Stock';
+    const matchesStatus = statusFilter === 'All Status' || stockStatus === statusFilter;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
   // Real client-side pagination (mockup: "Showing 1 to 5 of 5 items" + ‹ 1 2 3 ›)
@@ -105,14 +107,14 @@ export default function ItemsPage() {
             ))}
           </select>
           <select
-            value={unitFilter}
-            onChange={(e) => setUnitFilter(e.target.value)}
-            aria-label="Filter by unit"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            aria-label="Filter by stock status"
             className={FILTER_SELECT_CLASS}
           >
-            <option>All Units</option>
-            {UNITS.map((unit) => (
-              <option key={unit}>{unit}</option>
+            <option>All Status</option>
+            {STOCK_STATUSES.map((status) => (
+              <option key={status}>{status}</option>
             ))}
           </select>
         </CardHeader>

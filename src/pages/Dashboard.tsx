@@ -193,7 +193,15 @@ function SalesChart({ buckets }: { buckets: Bucket[] }) {
 
 /* ---------- delta chip ---------- */
 
-function Delta({ value }: { value?: number }) {
+function Delta({ value, forceDown }: { value?: number; forceDown?: boolean }) {
+  // forceDown → static red ↓ chip (mockup "Items Low in Stock" card)
+  if (forceDown) {
+    return (
+      <span className="text-xs font-medium flex items-center gap-1 text-red-600">
+        ↓
+      </span>
+    );
+  }
   if (value === undefined || !isFinite(value)) return null;
   const up = value >= 0;
   return (
@@ -270,7 +278,7 @@ export default function Dashboard() {
     { title: 'Total Sales (This Month)', value: inr(totalSales), change: salesChange },
     { title: 'Total Receivables', value: inr(receivables), change: receivablesChange },
     { title: 'Total Stock Value', value: inr(stockValue), change: undefined },
-    { title: 'Items Low In Stock', value: String(lowStockCount), change: undefined },
+    { title: 'Items Low In Stock', value: String(lowStockCount), change: undefined, forceDown: true },
   ];
 
   return (
@@ -284,7 +292,7 @@ export default function Dashboard() {
           >
             <div className="flex items-center justify-between mb-3">
               <p className="text-sm font-medium text-gray-600">{kpi.title}</p>
-              <Delta value={kpi.change} />
+              <Delta value={kpi.change} forceDown={kpi.forceDown} />
             </div>
             <p className="text-2xl font-bold text-gray-900">{kpi.value}</p>
           </div>
@@ -393,7 +401,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between text-xs font-medium text-gray-500 border-b border-gray-200 pb-2 mb-1">
                   <span className="flex-1">Item</span>
                   <span className="w-14 text-center">Stock</span>
-                  <span className="w-12 text-right">Status</span>
+                  <span className="w-14 text-right">Alert</span>
                 </div>
                 <div className="space-y-1">
                   {lowStockPreview.map((it) => (
@@ -407,7 +415,7 @@ export default function Dashboard() {
                       <span className="w-14 text-center text-sm text-gray-600">
                         {it.currentStock}
                       </span>
-                      <span className="w-12 text-right text-xs font-medium text-red-600">
+                      <span className="w-14 text-right text-xs font-medium text-red-600">
                         &lt; 5
                       </span>
                     </div>

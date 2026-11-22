@@ -129,6 +129,12 @@ export default function ItemModal({ open, onOpenChange, itemId }: ItemModalProps
   const handleImageChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        setError('Image size must be less than 2MB.');
+        e.target.value = '';
+        return;
+      }
+      setError('');
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -302,7 +308,7 @@ export default function ItemModal({ open, onOpenChange, itemId }: ItemModalProps
                     />
                   </div>
                   <div>
-                    <Label className="mb-1.5 block">Quantity (Stock) *</Label>
+                    <Label className="mb-1.5 block">Opening Stock *</Label>
                     <Input
                       type="number"
                       step="1"
@@ -347,7 +353,7 @@ export default function ItemModal({ open, onOpenChange, itemId }: ItemModalProps
                         Click to upload
                       </p>
                       <p className="text-[11px] text-gray-400 text-center px-4 mt-1">
-                        JPG or PNG
+                        JPG, PNG up to 2MB
                       </p>
                       <label className="mt-3 text-blue-600 text-sm font-medium cursor-pointer hover:text-blue-700 block text-center">
                         Browse

@@ -49,6 +49,8 @@ export interface Invoice {
   id: string;
   invoiceNo: string;
   date: string;
+  /** Optional payment due date (ISO). Falls back to `date` when absent. */
+  dueDate?: string;
   partyId: string;
   partyName: string;
   items: InvoiceItem[];
@@ -72,6 +74,51 @@ export interface StockMovement {
   refId?: string;
   date: string;
   balance: number;
+}
+
+/**
+ * Purchase = stock coming in (mockup screen 13 shows Purchase rows in Stock
+ * Movements). Simple stock-in record: qty + optional rate, no PO lifecycle.
+ */
+export interface Purchase {
+  id: string;
+  /** Human-readable reference, e.g. "PUR-001". */
+  refNo: string;
+  itemId: string;
+  itemName: string;
+  qty: number;
+  /** Optional unit cost for record-keeping. */
+  rate?: number;
+  note?: string;
+  date: string;
+  createdAt: string;
+}
+
+/** Payment received against a party (mockup screen 12 shows Payment rows). */
+export interface Payment {
+  id: string;
+  /** Human-readable reference, e.g. "RCP-001". */
+  refNo: string;
+  partyId: string;
+  invoiceId?: string; // linked invoice, if any
+  amount: number;
+  paymentMode: PaymentMode;
+  paymentRef?: string; // e.g. UPI / cheque reference
+  date: string;
+  createdAt: string;
+}
+
+/** Sale return / credit note against a party (mockup screen 12 shows Return rows). */
+export interface Return {
+  id: string;
+  /** Human-readable reference, e.g. "RET-001". */
+  refNo: string;
+  partyId: string;
+  invoiceId?: string; // original invoice being returned, if any
+  amount: number;
+  reason?: string;
+  date: string;
+  createdAt: string;
 }
 
 export interface PaginatedResponse<T> {

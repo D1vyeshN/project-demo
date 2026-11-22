@@ -5,7 +5,6 @@ import ItemsStock from './pages/ItemsStock';
 import PartiesPage from './pages/Parties';
 import PartyLedger from './pages/PartyLedger';
 import InvoiceView from './pages/InvoiceView';
-import InvoiceEdit from './pages/InvoiceEdit';
 import Invoices from './pages/Invoices';
 import LowStockPage from './pages/LowStock';
 import InvoiceForm from './pages/InvoiceForm';
@@ -33,7 +32,7 @@ export default function App() {
         <Route path="/sales/new" element={<InvoiceForm />} />
         <Route path="/sales/invoices" element={<Invoices />} />
         <Route path="/sales/invoices/:id" element={<InvoiceView />} />
-        <Route path="/sales/invoices/:id/edit" element={<InvoiceEdit />} />
+        <Route path="/sales/invoices/:id/edit" element={<InvoiceForm />} />
         <Route path="/low-stock" element={<LowStockPage />} />
         <Route path="/purchases" element={<PurchasesPage />} />
         <Route path="/reports" element={<ReportsPage />} />
