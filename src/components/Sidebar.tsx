@@ -9,30 +9,26 @@ import {
   DollarSign,
   ShoppingCart,
   Inbox,
-  BarChart3,
-  Settings as SettingsIcon,
   ChevronDown,
   Menu as MenuIcon,
   Trash2,
   Download,
 } from "lucide-react";
-import { useItems } from "../hooks/useItems";
-import { useParties } from "../hooks/useParties";
-import { useInvoices } from "../hooks/useInvoices";
-import { usePurchases } from "../hooks/usePurchases";
-import { usePayments } from "../hooks/usePayments";
-import { useReturns } from "../hooks/useReturns";
-import { clearAllStorage, generateId, nowISO } from "../lib/storage";
+import { useItems } from "@/modules/inventory/useItems";
+import { useParties } from "@/modules/parties/useParties";
+import { useInvoices } from "@/modules/sales/useInvoices";
+import { usePurchases } from "@/modules/purchases/usePurchases";
+import { usePayments } from "@/modules/payments/usePayments";
+import { clearAllStorage, generateId, nowISO } from "@/lib/storage";
 import {
   generateTempItems,
   generateTempParties,
   generateTempInvoices,
   generateTempPurchases,
   generateTempPayments,
-  generateTempReturns,
-} from "../lib/tempData";
-import { Button } from "./ui/button";
-import { ConfirmDialog } from "./ui/confirm-dialog";
+} from "@/lib/tempData";
+import { Button } from "@/shared/ui/button";
+import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
 import { toast } from "sonner";
 
 const sidebarItems = [
@@ -95,16 +91,6 @@ const sidebarItems = [
       },
     ],
   },
-  {
-    label: "Reports",
-    icon: <BarChart3 className="w-4 h-4" />,
-    to: "/reports",
-  },
-  {
-    label: "Settings",
-    icon: <SettingsIcon className="w-4 h-4" />,
-    to: "/settings",
-  },
 ];
 
 // All menu paths, flattened — used so the LONGEST matching path wins
@@ -148,7 +134,6 @@ export default function SidebarComponent() {
   const { setInvoices } = useInvoices();
   const { setPurchases } = usePurchases();
   const { setPayments } = usePayments();
-  const { setReturns } = useReturns();
 
   // Show "Clear Data" if ANY master data exists (items OR parties)
   const hasAnyData = items.length > 0 || parties.length > 0;
@@ -190,20 +175,14 @@ export default function SidebarComponent() {
       id: generateId(),
       createdAt: now,
     }));
-    const tempReturns = generateTempReturns(tempParties).map((r) => ({
-      ...r,
-      id: generateId(),
-      createdAt: now,
-    }));
     setItems(tempItems);
     setParties(tempParties);
     setInvoices(tempInvoices);
     setPurchases(tempPurchases);
     setPayments(tempPayments);
-    setReturns(tempReturns);
 
     toast.success(
-      "Successfully loaded 10 items, 10 parties, 5 invoices, 5 purchases, 5 payments, 3 returns, and 5 stock movements as temporary data.",
+      "Successfully loaded 10 items, 10 parties, 5 invoices, 5 purchases, and 5 payments as temporary data.",
     );
   };
 

@@ -12,6 +12,8 @@ export default defineConfig({
       '@components': '/src/components',
       '@pages': '/src/pages',
       '@hooks': '/src/hooks',
+      '@modules': '/src/modules',
+      '@shared': '/src/shared',
     },
   },
 });

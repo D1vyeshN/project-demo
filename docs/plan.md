@@ -1,59 +1,152 @@
 # Implementation Plan: Inventory Management System
 
-**Project:** Inventory App (Next.js 16 + React 19 + Tailwind 4 + TypeScript)
+**Project:** Inventory App (React 19 + Tailwind 4 + TypeScript + Vite)
 **Data Storage:** localStorage only — no API, no backend, no auth
 **UI Reference:** `docs/` folder — 5 mockup images
+**Architecture:** Module-wise file system with `createBrowserRouter` (React Router v7)
 
 ---
 
-## 1. Docs / Mockup Reference
-
-All 5 WhatsApp screenshots renamed and moved into `docs/`:
-
-| File | Mockup Section | Content |
-|------|---------------|---------|
-| `docs/01-item-master-stock-management.jpeg` | 01–02 | Item Master & Stock Management, Party Master |
-| `docs/03-sales-invoice-creation.jpeg` | 03 | Sales Invoice Creation (party selection, item selection, calculations) |
-| `docs/04-payment-details.jpeg` | 04 | Payment Details (amount received, status, remaining due) |
-| `docs/05-sample-data.jpeg` | 05 | Sample Inventory Data & Expected Invoice Calculation |
-| `docs/ui-dashboard-mockup.jpeg` | 01–14 | Full UI dashboard mockup (14 screens) |
-
----
-
-## 2. Tech Stack (confirmed in package.json)
+## 1. Tech Stack (confirmed in package.json)
 
 | Layer | Version |
 |-------|---------|
-| Next.js | 16.4.6 (App Router) |
 | React | 19.3.0 |
-| Tailwind CSS | 4.3.3 |
-| TypeScript | ^5 |
+| Tailwind CSS | 4.1.0 |
+| TypeScript | ~5.8.2 |
+| Router | react-router-dom ^7.5.0 |
 | State | localStorage + React useState/useEffect |
 | Styling | Tailwind utility classes |
+| Build | Vite ^6.2.0 |
 
 ---
 
-## 3. Data Model — localStorage Schema
+## 2. Module-wise File Structure (flat)
+
+```
+src/
+├── main.tsx              # createBrowserRouter + RouterProvider
+├── App.tsx               # Outlet shell (no Routes)
+├── routes.tsx            # Central route registry — all routes listed here
+├── index.css
+│
+├── shared/               # Only what is truly cross-module
+│   ├── components/
+│   │   ├── Layout.tsx            # Shell + navigation loading spinner
+│   │   ├── Sidebar.tsx           # Navigation
+│   │   ├── Header.tsx            # Top bar
+│   │   ├── Loading.tsx           # Simple spinner for route transitions
+│   │   ├── NotFound.tsx          # 404 page (Tailwind + shadcn)
+│   │   ├── ErrorPage.tsx         # Generic error page
+│   │   └── RouteError.tsx        # React Router errorElement UI
+│   │   └── ui/                   # shadcn primitives (button, input, dialog, table, …)
+│   ├── lib/                      # utils, storage, constants
+│   └── types.ts                  # Shared types
+│
+├── modules/              # One flat folder per business feature
+│   ├── dashboard/
+│   │   ├── Dashboard.tsx
+│   │   └── types.ts
+│   │
+│   ├── inventory/              # Items + Stock
+│   │   ├── Items.tsx
+│   │   ├── ItemsStock.tsx
+│   │   ├── LowStock.tsx
+│   │   ├── StockMovements.tsx
+│   │   ├── ItemModal.tsx
+│   │   ├── ItemSelector.tsx
+│   │   ├── useItems.ts
+│   │   └── types.ts
+│   │
+│   ├── parties/
+│   │   ├── Parties.tsx
+│   │   ├── PartyLedger.tsx
+│   │   ├── PartyModal.tsx
+│   │   ├── useParties.ts
+│   │   ├── partyCalc.ts
+│   │   └── types.ts
+│   │
+│   ├── sales/                  # Invoices
+│   │   ├── Invoices.tsx
+│   │   ├── InvoiceForm.tsx
+│   │   ├── InvoiceView.tsx
+│   │   ├── useInvoices.ts
+│   │   ├── invoiceCalc.ts
+│   │   └── types.ts
+│   │
+│   ├── purchases/
+│   │   ├── Purchases.tsx
+│   │   ├── PurchaseModal.tsx
+│   │   ├── usePurchases.ts
+│   │   └── types.ts
+│   │
+│   └── payments/
+│       └── usePayments.ts
+│
+└── assets/               # Images, icons (optional)
+```
+
+### Module rules
+- **No subfolders** — every file for a feature lives directly in its module folder.
+- **No barrel files (`index.ts`)** — import directly from the file you need.
+- **No per-module `routes.tsx`** — all routes live in `src/routes.tsx`.
+- **`shared/` only for cross-module code** — Layout, Sidebar, shadcn UI primitives, storage, utils.
+- **Path aliases** — `@/modules`, `@/shared` added to `vite.config.ts` and `tsconfig.json`.
+
+---
+
+## 3. Routes
+
+| Route | Module | Page |
+|-------|--------|------|
+| `/` | dashboard | Dashboard |
+| `/items-stock` | inventory | ItemsStock (tabs: Items / Stock Movements) |
+| `/items` | inventory | Items |
+| `/stock-movements` | inventory | StockMovements |
+| `/low-stock` | inventory | LowStock |
+| `/parties` | parties | Parties |
+| `/parties/:id/ledger` | parties | PartyLedger |
+| `/sales/new` | sales | InvoiceForm (create) |
+| `/sales/invoices` | sales | Invoices |
+| `/sales/invoices/:id` | sales | InvoiceView |
+| `/sales/invoices/:id/edit` | sales | InvoiceForm (edit) |
+| `/purchases` | purchases | Purchases |
+| `*` | shared | NotFound (404) |
+
+---
+
+## 4. Loading & Error Handling
+
+- **Route transitions:** `Layout.tsx` uses `useNavigation()` from React Router v7. When `navigation.state === 'loading'`, the simple `Loading.tsx` spinner is shown instead of page content.
+- **404:** `NotFound.tsx` (rebuilt with Tailwind + shadcn Card) is the catch-all `*` route, registered last in `routes.ts`.
+- **Route errors:** Root route sets `errorElement: <RouteError />` to catch unexpected errors in any module.
+
+---
+
+## 5. Data Model — localStorage Schema
 
 All data persisted in `browser localStorage` as JSON.
 
-### 3.1 Items (`items` key)
+### 5.1 Items (`items` key)
 ```ts
 interface Item {
-  id: string;              // uuid
-  sku: string;             // unique, e.g. "ITM001"
-  name: string;            // e.g. "Laptop"
+  id: string;
+  sku: string;
+  name: string;
+  category?: string;
   sellingPrice: number;
   gstRate: 0 | 5 | 12 | 18 | 28;
   unit: 'PCS' | 'BOX' | 'KG' | 'etc.';
   openingStock: number;
-  currentStock: number;    // derived from openingStock - sold + received
-  createdAt: string;       // ISO
+  currentStock: number;
+  description?: string;
+  imageUrl?: string;
+  createdAt: string;
   updatedAt: string;
 }
 ```
 
-### 3.2 Parties (`parties` key)
+### 5.2 Parties (`parties` key)
 ```ts
 interface Party {
   id: string;
@@ -61,14 +154,14 @@ interface Party {
   phone: string;
   gstin?: string;
   address?: string;
-  openingOutstanding: number;   // starting balance
-  currentOutstanding: number;   // derived
+  openingOutstanding: number;
+  currentOutstanding: number;
   createdAt: string;
   updatedAt: string;
 }
 ```
 
-### 3.3 Invoices (`invoices` key)
+### 5.3 Invoices (`invoices` key)
 ```ts
 interface InvoiceItem {
   itemId: string;
@@ -76,15 +169,17 @@ interface InvoiceItem {
   name: string;
   qty: number;
   rate: number;
-  discount: number;       // percent or fixed
+  discountPercent: number;
+  discount: number;
   gstRate: 0 | 5 | 12 | 18 | 28;
-  amount: number;         // line total after discount + GST
+  amount: number;
 }
 
 interface Invoice {
   id: string;
-  invoiceNo: string;      // e.g. "INV-005"
+  invoiceNo: string;
   date: string;
+  dueDate?: string;
   partyId: string;
   partyName: string;
   items: InvoiceItem[];
@@ -93,7 +188,7 @@ interface Invoice {
   taxableAmount: number;
   gst: number;
   total: number;
-  paymentMode: 'Cash' | 'Bank' | 'UPI' | 'etc.';
+  paymentMode: 'None' | 'Cash' | 'Bank' | 'UPI' | 'etc.';
   amountReceived: number;
   status: 'Paid' | 'Partially Paid' | 'Unpaid';
   paymentRef?: string;
@@ -101,123 +196,27 @@ interface Invoice {
 }
 ```
 
-### 3.4 Stock Movements (`stockMovements` key) — audit log
+### 5.4 Stock Movements (`stockMovements` key)
 ```ts
 interface StockMovement {
   id: string;
   itemId: string;
   type: 'Opening Stock' | 'Sales' | 'Purchase' | 'Adjustment';
-  qty: number;            // positive for in, negative for out
-  refId?: string;         // invoice id if sales
+  qty: number;
+  refId?: string;
   date: string;
-  balance: number;        // running stock balance after this movement
+  balance: number;
 }
 ```
 
----
-
-## 4. Page Structure (Next.js App Router)
-
-| Route | Page | Mockup Ref | Purpose |
-|-------|------|------------|---------|
-| `/` | Dashboard | 01 | KPI cards (sales, receivables, stock value, low stock), recent sales, chart |
-| `/items` | Item Master List | 02 | Table of items, search, low-stock badges, add/edit/delete |
-| `/items/new` | Item Master Add/Edit | 03 | Form: name, SKU, selling price, GST rate, opening stock, unit |
-| `/parties` | Party Master List | 04 | Table of parties, outstanding balance, search |
-| `/parties/new` | Party Master Add/Edit | 05 | Form: name, phone, GSTIN, address, opening outstanding |
-| `/invoices/new` | Sales Invoice Creation | 06–10 | Party select → item select → calculations → payment details → save |
-| `/invoices/[id]` | Saved Invoice View | 11 | View saved invoice, print/share/delete |
-| `/parties/[id]/ledger` | Party Ledger / Outstanding | 12 | Per-party transaction history with running balance |
-| `/stock-movements` | Stock Movements | 13 | Item-wise stock in/out log |
-| `/low-stock` | Low Stock Alert | 14 | Items below reorder level |
+### 5.5 Purchases, Payments, Returns
+- **Purchase:** id, refNo, itemId, itemName, qty, rate?, note, date, createdAt
+- **Payment:** id, refNo, partyId, invoiceId?, amount, paymentMode, paymentRef?, date, createdAt
+- **Return:** id, refNo, partyId, invoiceId?, amount, reason?, date, createdAt
 
 ---
 
-## 5. Feature Specifications
-
-### 5.1 Item Master (sections 01–02)
-- **Fields:** Item Name, SKU/Item Code, Selling Price, GST Rate (0/5/12/18/28%), Opening Stock Qty, Unit of Measurement
-- **Validations:**
-  - Prevent duplicate SKUs
-  - Prevent invalid/negative stock quantities
-  - **Do not allow deleting an item already used in a sales transaction**
-- **Actions:** Add, Edit, Delete, display in table with current available stock
-
-### 5.2 Party Master (sections 01–02)
-- **Fields:** Party Name, Phone Number, GSTIN (optional), Billing Address, Opening Outstanding Balance
-- **Validations:**
-  - Prevent deleting parties associated with existing invoices
-- **Auto-update:** outstanding balance updates when invoices/payments saved
-
-### 5.3 Sales Invoice Creation (section 03)
-**Step 1 — Party Selection:**
-- Search and select existing party
-- Auto-display: current outstanding balance, GSTIN, address
-
-**Step 2 — Item Selection:**
-- Item search dropdown (while adding)
-- Show available stock, selling price, GST rate per item
-- Allow multiple items per invoice
-- Edit qty, price, discount, GST rate per line
-- Show projected stock remaining after proposed sale
-- **Block** selling more than available stock (Stock Validation Error)
-
-**Step 3 — Invoice Calculations (auto):**
-- Line subtotal, discount (percentage or fixed), taxable amount, GST, final total
-- GST calculated on taxable amount (after discount)
-- Handle rounding consistently; reject negative/invalid qty, price, discount
-
-**Step 4 — Payment Details (section 04):**
-- Invoice Amount, Previous Outstanding Balance, Amount Received, Payment Mode (Cash/Bank/UPI/etc.), optional Payment Reference, Remaining Amount Due
-- Status: Paid / Partially Paid / Unpaid
-- Reject negative payments and payments exceeding invoice amount
-
-**Step 5 — Final Summary (section 10):**
-- Subtotal, Discount, Taxable Amount, GST (18%), Invoice Total
-
-**On Save:**
-- Deduct sold quantities from item stock
-- Update party outstanding balance (add invoice total, subtract amount received)
-- Save invoice + payment to localStorage
-- Create stock movement records
-- Display payment status badge
-
-### 5.4 Payment (embedded in invoice flow)
-- Modes: Cash, Bank, UPI, etc.
-- Status logic:
-  - **Paid:** amount received == invoice amount
-  - **Partially Paid:** amount received > 0 but < invoice amount
-  - **Unpaid:** no payment received
-- Previous outstanding shown separately and included in party's total outstanding
-
----
-
-## 6. Reporting / Secondary Screens
-
-| Screen | Mockup | Purpose |
-|--------|--------|---------|
-| Dashboard Overview | 01 | KPI cards + Recent Sales table + Sales Overview chart |
-| Saved Invoice View | 11 | View saved invoice; Print/Share/Delete |
-| Party Ledger / Outstanding | 12 | Per-party transaction history with running balance |
-| Stock Movements | 13 | Item-wise stock in/out log with dates and references |
-| Low Stock Alert | 14 | Items below reorder level |
-
----
-
-## 7. Implementation Phases
-
-| Phase | Work | Status |
-|-------|------|--------|
-| **Phase 0** | Remove auth/API/backend; rename project; Next.js setup | ✅ Complete |
-| **Phase 1** | Set up localStorage helpers + constants + types | Pending |
-| **Phase 2** | Item Master: types, CRUD, list page, add/edit page, validations | Pending |
-| **Phase 3** | Party Master: types, CRUD, list page, add/edit page, outstanding balance | Pending |
-| **Phase 4** | Sales Invoice: party select, item select, calculations, payment details, save (stock + party update) | Pending |
-| **Phase 5** | Saved Invoice View + Party Ledger + Stock Movements + Low Stock Alert + Dashboard | Pending |
-
----
-
-## 8. Key Validations
+## 6. Key Validations
 
 - Duplicate SKU blocked on item save
 - Item deletion blocked if referenced by any invoice
@@ -229,47 +228,15 @@ interface StockMovement {
 
 ---
 
-## 9. Files to Create (Phase 1–5)
+## 7. Definition of Done
 
-```
-src/
-  lib/
-    storage.ts          # localStorage get/set helpers
-    constants.ts        # GST rates, units, payment modes
-    types.ts            # TypeScript interfaces
-  app/
-    items/
-      page.tsx          # Item Master List
-      new/
-        page.tsx        # Item Master Add/Edit
-    parties/
-      page.tsx          # Party Master List
-      new/
-        page.tsx        # Party Master Add/Edit
-      [id]/
-        ledger/
-          page.tsx      # Party Ledger
-    invoices/
-      new/
-        page.tsx        # Sales Invoice Creation
-      [id]/
-        page.tsx        # Saved Invoice View
-    stock-movements/
-      page.tsx
-    low-stock/
-      page.tsx
-    page.tsx            # Dashboard
-```
-
----
-
-## 10. Definition of Done
-
+- [ ] Module-wise file structure implemented (src/modules/ per feature)
+- [ ] `createBrowserRouter` replaces `<Routes>` in main.tsx
+- [ ] Loading spinner shown on route transitions (useNavigation)
+- [ ] 404 page (NotFound.tsx, Tailwind + shadcn) as catch-all `*` route
+- [ ] Route error boundary (RouteError.tsx) on root route
+- [ ] Path aliases `@/modules`, `@/shared` configured in vite + tsconfig
 - [ ] No `axios`, no API calls, no backend dependency
 - [ ] All data persists in `localStorage` and survives page refresh
-- [ ] Item Master: CRUD + duplicate SKU block + no-delete-if-used
-- [ ] Party Master: CRUD + outstanding balance + no-delete-if-used
-- [ ] Sales Invoice: party/item selection, auto calculations, payment details, stock deduction
-- [ ] Payment status: Paid / Partially Paid / Unpaid
-- [ ] Reports: Dashboard, Saved Invoice, Party Ledger, Stock Movements, Low Stock Alert
+- [ ] Build passes: `npm run build` (tsc + vite build)
 - [ ] UI matches mockups in `docs/` folder
