@@ -1,6 +1,6 @@
 export type GSTRate = 0 | 5 | 12 | 18 | 28;
 export type Unit = 'PCS' | 'BOX' | 'KG' | 'etc.';
-export type PaymentMode = 'Cash' | 'Bank' | 'UPI' | 'etc.';
+export type PaymentMode = 'None' | 'Cash' | 'Bank' | 'UPI' | 'etc.';
 export type InvoiceStatus = 'Paid' | 'Partially Paid' | 'Unpaid';
 export type StockMovementType = 'Opening Stock' | 'Sales' | 'Purchase' | 'Adjustment';
 
@@ -14,7 +14,6 @@ export interface Item {
   unit: Unit;
   openingStock: number;
   currentStock: number;
-  reorderLevel?: number;
   description?: string;
   imageUrl?: string;
   createdAt: string;
@@ -39,6 +38,8 @@ export interface InvoiceItem {
   name: string;
   qty: number;
   rate: number;
+  /** Discount percentage (0–100). `discount` below is the computed ₹ amount. */
+  discountPercent: number;
   discount: number;
   gstRate: GSTRate;
   amount: number;

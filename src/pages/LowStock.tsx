@@ -27,10 +27,10 @@ export default function LowStockPage() {
                 <TableRow>
                   <TableHead>SKU</TableHead>
                   <TableHead>Item Name</TableHead>
-                  <TableHead className="text-center">Unit</TableHead>
-                  <TableHead className="text-right">Current Stock</TableHead>
-                  <TableHead className="text-right">Selling Price</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className="text-center w-16">Unit</TableHead>
+                  <TableHead className="text-right w-24">Current Stock</TableHead>
+                  <TableHead className="text-right w-24">Selling Price</TableHead>
+                  <TableHead className="text-right w-24">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -58,7 +58,7 @@ export default function LowStockPage() {
                       <TableCell className="text-right">
                         <Link
                           to={`/items/${it.id}/edit`}
-                          className="text-indigo-600 hover:text-indigo-800 text-sm font-medium"
+                          className="text-blue-600 hover:text-blue-700 text-sm font-medium"
                         >
                           Restock
                         </Link>
@@ -74,3 +74,4 @@ export default function LowStockPage() {
     </div>
   );
 }
+

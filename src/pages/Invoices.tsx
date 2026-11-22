@@ -4,11 +4,13 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { Edit2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const statusColor: Record<string, string> = {
-  Paid: 'bg-green-100 text-green-700',
-  'Partially Paid': 'bg-amber-100 text-amber-700',
-  Unpaid: 'bg-red-100 text-red-700',
+  Paid: 'border-green-200 bg-green-100 text-green-700',
+  'Partially Paid': 'border-amber-200 bg-amber-100 text-amber-700',
+  Unpaid: 'border-red-200 bg-red-100 text-red-700',
 };
 
 export default function Invoices() {
@@ -20,29 +22,29 @@ export default function Invoices() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Link to="/" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+        <Link to="/" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
           ← Back
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Sales Invoices</h1>
       </div>
 
-      <Card>
+      <Card className="border-gray-200">
         <CardHeader>
-          <CardTitle>All Invoices</CardTitle>
+          <CardTitle className="text-base font-semibold">All Invoices</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Invoice No.</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Party</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Received</TableHead>
-                  <TableHead className="text-right">Balance Due</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                  <TableHead className="text-right">Action</TableHead>
+                  <TableHead className='w-24'>Invoice No.</TableHead>
+                  <TableHead className='w-20'>Date</TableHead>
+                  <TableHead className='w-24'>Party</TableHead>
+                  <TableHead className="text-right w-24">Total</TableHead>
+                  <TableHead className="text-right w-24">Received</TableHead>
+                  <TableHead className="text-right w-24">Balance Due</TableHead>
+                  <TableHead className="text-center w-20">Status</TableHead>
+                  <TableHead className="text-right w-20">Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -61,42 +63,30 @@ export default function Invoices() {
                       const partyName = partyMap.get(inv.partyId) || inv.partyName;
                       return (
                         <TableRow key={inv.id}>
-                          <TableCell className="font-medium">
-                            <Link to={`/invoices/${inv.id}`}>{inv.invoiceNo}</Link>
+                          <TableCell className="font-medium text-gray-900">{inv.invoiceNo}</TableCell>
+                          <TableCell className="text-gray-600">{new Date(inv.date).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-gray-600">{partyName}</TableCell>
+                          <TableCell className="text-right font-medium text-gray-900">
+                            ₹{inv.total.toLocaleString(undefined, { minimumFractionDigits: 0 })}
                           </TableCell>
-                          <TableCell>
-                            {new Date(inv.date).toLocaleDateString()}
+                          <TableCell className="text-right text-gray-600">
+                            ₹{inv.amountReceived.toLocaleString(undefined, { minimumFractionDigits: 0 })}
                           </TableCell>
-                          <TableCell>{partyName}</TableCell>
-                          <TableCell className="text-right font-medium">
-                            {inv.total.toLocaleString(undefined, {
-                              style: 'currency',
-                              currency: 'INR',
-                            })}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {inv.amountReceived.toLocaleString(undefined, {
-                              style: 'currency',
-                              currency: 'INR',
-                            })}
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {balanceDue.toLocaleString(undefined, {
-                              style: 'currency',
-                              currency: 'INR',
-                            })}
+                          <TableCell className="text-right font-medium text-gray-900">
+                            ₹{balanceDue.toLocaleString(undefined, { minimumFractionDigits: 0 })}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Badge className={statusColor[inv.status]}>
+                            <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
                               {inv.status}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Link
-                              to={`/invoices/${inv.id}/edit`}
-                              className="text-xs text-indigo-600 hover:text-indigo-800 hover:underline"
+                              to={`/sales/invoices/${inv.id}/edit`}
+                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                              title="Edit"
                             >
-                              Edit
+                              <Edit2 className="w-4 h-4" />
                             </Link>
                           </TableCell>
                         </TableRow>
@@ -111,3 +101,4 @@ export default function Invoices() {
     </div>
   );
 }
+

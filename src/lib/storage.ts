@@ -1,6 +1,8 @@
 import type { Item, Party, Invoice, StockMovement } from './types';
 import { STORAGE_KEYS } from './constants';
 
+export { STORAGE_KEYS };
+
 type StorageMap = {
   [STORAGE_KEYS.ITEMS]: Item[];
   [STORAGE_KEYS.PARTIES]: Party[];
@@ -40,4 +42,15 @@ export function generateId(): string {
 
 export function nowISO(): string {
   return new Date().toISOString();
+}
+
+export function clearAllStorage(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    Object.values(STORAGE_KEYS).forEach((key) => {
+      window.localStorage.removeItem(key);
+    });
+  } catch {
+    // storage quota or private mode — silently ignore
+  }
 }

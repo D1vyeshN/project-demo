@@ -4,10 +4,9 @@ import { useItems } from '../hooks/useItems';
 import { useParties } from '../hooks/useParties';
 import { useInvoices } from '../hooks/useInvoices';
 import { calcInvoice, calcLine, statusFrom } from '../lib/invoiceCalc';
-import type { GSTRate, InvoiceItem, Party, InvoiceStatus } from '../lib/types';
-import { GST_RATES } from '../lib/constants';
+import type { GSTRate, InvoiceItem, Party, InvoiceStatus, PaymentMode } from '../lib/types';
+import { DISCOUNT_PERCENTS, GST_RATES, PAYMENT_MODES } from '../lib/constants';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Table } from '../components/ui/table';
 
 const EMPTY_ITEM: InvoiceItem = {
   itemId: '',
@@ -15,6 +14,7 @@ const EMPTY_ITEM: InvoiceItem = {
   name: '',
   qty: 1,
   rate: 0,
+  discountPercent: 0,
   discount: 0,
   gstRate: 18,
   amount: 0,
@@ -22,8 +22,8 @@ const EMPTY_ITEM: InvoiceItem = {
 
 export default function InvoiceEdit() {
   const { id } = useParams<{ id: string }>();
-  const { items } = useItems();
-  const { parties } = useParties();
+  const { items, setItems } = useItems();
+  const { parties, updateParty } = useParties();
   const { invoices, updateInvoice } = useInvoices();
   const navigate = useNavigate();
 
@@ -34,10 +34,10 @@ export default function InvoiceEdit() {
     invoice ? parties.find((p) => p.id === invoice.partyId) || null : null
   );
   const [invoiceLines, setInvoiceLines] = useState<InvoiceItem[]>(
-    invoice ? invoice.items : [EMPTY_ITEM]
+    invoice ? [...invoice.items] : [EMPTY_ITEM]
   );
-  const [paymentMode, setPaymentMode] = useState<'Cash' | 'Bank' | 'UPI' | 'etc.'>(
-    invoice ? invoice.paymentMode : 'Cash'
+  const [paymentMode, setPaymentMode] = useState<PaymentMode>(
+    invoice ? invoice.paymentMode : 'None'
   );
   const [amountReceived, setAmountReceived] = useState(
     invoice ? invoice.amountReceived : 0
@@ -53,7 +53,7 @@ export default function InvoiceEdit() {
   }, [invoiceLines]);
 
   const removeLine = useCallback((index: number) => {
-    setInvoiceLines(invoiceLines.filter((_, i) => i !== index));
+    setInvoiceLines((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   const updateLine = useCallback(
@@ -63,9 +63,10 @@ export default function InvoiceEdit() {
       const line = calcLine(
         next[index].qty,
         next[index].rate,
-        next[index].discount,
+        next[index].discountPercent,
         next[index].gstRate
       );
+      next[index].discount = line.discountAmount;
       next[index].amount = line.amount;
       setInvoiceLines(next);
     },
@@ -107,12 +108,52 @@ export default function InvoiceEdit() {
       status,
     };
 
+    // --- Stock re-adjustment: reverse old, apply new ---
+    const nextItems = [...items];
+
+    // Reverse old stock deduction (add back old quantities)
+    for (const oldLine of invoice.items) {
+      const idx = nextItems.findIndex((i) => i.id === oldLine.itemId);
+      if (idx >= 0) {
+        nextItems[idx].currentStock += oldLine.qty;
+      }
+    }
+
+    // Apply new stock deduction (subtract new quantities)
+    for (const newLine of invoiceLines) {
+      const idx = nextItems.findIndex((i) => i.id === newLine.itemId);
+      if (idx >= 0) {
+        nextItems[idx].currentStock -= newLine.qty;
+      }
+    }
+
+    // Save updated items to localStorage
+    setItems(nextItems);
+
+    // --- Party outstanding adjustment ---
+    // Calculate the change in invoice total and received amount
+    const oldTotal = invoice.total;
+    const oldReceived = invoice.amountReceived;
+    const newTotal = total;
+    const newReceived = amountReceived;
+
+    // Calculate the net change in outstanding
+    // Old outstanding contribution: oldTotal - oldReceived
+    // New outstanding contribution: newTotal - newReceived
+    // Change = (newTotal - newReceived) - (oldTotal - oldReceived)
+    const deltaOutstanding = (newTotal - newReceived) - (oldTotal - oldReceived);
+
+    // Apply the adjustment to the party
+    const newOutstanding = party.currentOutstanding + deltaOutstanding;
+    updateParty(party.id, { currentOutstanding: newOutstanding });
+
     updateInvoice(invoice.id, updates);
-    navigate(`/invoices/${invoice.id}`);
+    navigate(`/sales/invoices/${invoice.id}`);
   }, [
     invoice,
     party,
     invoiceLines,
+    items,
     subtotal,
     discount,
     taxableAmount,
@@ -121,6 +162,8 @@ export default function InvoiceEdit() {
     paymentMode,
     amountReceived,
     updateInvoice,
+    updateParty,
+    setItems,
     navigate,
   ]);
 
@@ -131,7 +174,7 @@ export default function InvoiceEdit() {
           <CardTitle>Invoice Not Found</CardTitle>
         </CardHeader>
         <CardContent>
-          <Link to="/invoices" className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+          <Link to="/sales/invoices" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
             Back to Invoices
           </Link>
         </CardContent>
@@ -142,7 +185,7 @@ export default function InvoiceEdit() {
   return (
     <div className="max-w-6xl">
       <div className="flex items-center justify-between mb-6">
-        <Link to={`/invoices/${id}`} className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+        <Link to={`/sales/invoices/${id}`} className="text-blue-600 hover:text-blue-700 text-sm font-medium">
           &larr; Back to Invoice
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Edit Invoice #{invoice.invoiceNo}</h1>
@@ -168,7 +211,7 @@ export default function InvoiceEdit() {
                   const p = parties.find((party) => party.id === e.target.value);
                   setParty(p || null);
                 }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               >
                 <option value="">Select party</option>
                 {parties.map((p) => (
@@ -194,13 +237,13 @@ export default function InvoiceEdit() {
             <select
               value={paymentMode}
               onChange={(e) =>
-                setPaymentMode(e.target.value as 'Cash' | 'Bank' | 'UPI' | 'etc.')
+                setPaymentMode(e.target.value as PaymentMode)
               }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
-              {GST_RATES.map((r) => (
-                <option key={r} value={r}>
-                  {r}%
+              {PAYMENT_MODES.map((mode) => (
+                <option key={mode} value={mode}>
+                  {mode}
                 </option>
               ))}
             </select>
@@ -215,7 +258,7 @@ export default function InvoiceEdit() {
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <Table className="w-full text-left text-sm">
+            <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <th className="p-3 font-medium text-gray-600">#</th>
@@ -224,7 +267,7 @@ export default function InvoiceEdit() {
                   <th className="p-3 font-medium text-gray-600 text-right">Available Stock</th>
                   <th className="p-3 font-medium text-gray-600 text-right">Qty</th>
                   <th className="p-3 font-medium text-gray-600 text-right">Rate (₹)</th>
-                  <th className="p-3 font-medium text-gray-600 text-right">Discount</th>
+                  <th className="p-3 font-medium text-gray-600 text-right">Discount %</th>
                   <th className="p-3 font-medium text-gray-600 text-right">GST %</th>
                   <th className="p-3 font-medium text-gray-600 text-right">Amount (₹)</th>
                   <th className="p-3 font-medium text-gray-600 text-right">Action</th>
@@ -234,7 +277,7 @@ export default function InvoiceEdit() {
                 {invoiceLines.map((line, idx) => {
                   const item = items.find((i) => i.id === line.itemId);
                   return (
-                    <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                    <tr key={idx} className="border-b border-gray-200 hover:bg-gray-50">
                       <td className="p-3 text-gray-900">{idx + 1}</td>
                       <td className="p-3">
                         {item ? (
@@ -255,7 +298,7 @@ export default function InvoiceEdit() {
                           type="number"
                           step="1"
                           min="1"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="w-full px-2 py-1 border border-input rounded text-sm text-right focus:ring-2 focus:ring-blue-500 outline-none"
                           value={line.qty}
                           onChange={(e) =>
                             updateLine(idx, 'qty', Math.max(1, parseInt(e.target.value) || 1))
@@ -267,7 +310,7 @@ export default function InvoiceEdit() {
                           type="number"
                           step="0.01"
                           min="0"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="w-full px-2 py-1 border border-input rounded text-sm text-right focus:ring-2 focus:ring-blue-500 outline-none"
                           value={line.rate}
                           onChange={(e) =>
                             updateLine(idx, 'rate', Math.max(0, parseFloat(e.target.value) || 0))
@@ -275,20 +318,28 @@ export default function InvoiceEdit() {
                         />
                       </td>
                       <td className="p-3 text-right">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          className="w-full px-2 py-1 border border-gray-300 rounded text-sm text-right focus:ring-2 focus:ring-indigo-500 outline-none"
-                          value={line.discount}
+                        <select
+                          value={line.discountPercent}
                           onChange={(e) =>
                             updateLine(
                               idx,
-                              'discount',
-                              Math.max(0, parseFloat(e.target.value) || 0)
+                              'discountPercent',
+                              Number(e.target.value)
                             )
                           }
-                        />
+                          className="px-2 py-1 border border-input rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                        >
+                          {(DISCOUNT_PERCENTS.includes(line.discountPercent)
+                            ? DISCOUNT_PERCENTS
+                            : [...DISCOUNT_PERCENTS, line.discountPercent].sort(
+                                (a, b) => a - b
+                              )
+                          ).map((percent) => (
+                            <option key={percent} value={percent}>
+                              {percent}%
+                            </option>
+                          ))}
+                        </select>
                       </td>
                       <td className="p-3 text-right">
                         <select
@@ -300,7 +351,7 @@ export default function InvoiceEdit() {
                               e.target.value as unknown as GSTRate
                             )
                           }
-                          className="px-2 py-1 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+                          className="px-2 py-1 border border-input rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none"
                         >
                           {GST_RATES.map((r) => (
                             <option key={r} value={r}>{r}%</option>
@@ -322,12 +373,12 @@ export default function InvoiceEdit() {
                   );
                 })}
               </tbody>
-            </Table>
+            </table>
           </div>
           <div className="flex justify-end mt-4">
             <button
               onClick={addLine}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
             >
               + Add Item
             </button>
@@ -352,7 +403,7 @@ export default function InvoiceEdit() {
                 type="number"
                 step="0.01"
                 min="0"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                className="w-full px-3 py-2 border border-input rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                 value={amountReceived}
                 onChange={(e) => setAmountReceived(parseFloat(e.target.value) || 0)}
               />
@@ -369,14 +420,14 @@ export default function InvoiceEdit() {
 
       <div className="flex justify-between mt-8">
         <button
-          onClick={() => navigate(`/invoices/${id}`)}
-          className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
+          onClick={() => navigate(`/sales/invoices/${id}`)}
+          className="px-4 py-2 border border-input text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50"
         >
           Cancel
         </button>
         <button
           onClick={handleSave}
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700"
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
         >
           Save Changes
         </button>

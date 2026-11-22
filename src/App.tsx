@@ -1,37 +1,43 @@
-import { Routes, Route } from 'react-router-dom';
+import { Navigate, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
-import ItemsPage from './pages/Items';
-import ItemForm from './pages/ItemForm';
+import ItemsStock from './pages/ItemsStock';
 import PartiesPage from './pages/Parties';
-import PartyForm from './pages/PartyForm';
 import PartyLedger from './pages/PartyLedger';
 import InvoiceView from './pages/InvoiceView';
 import InvoiceEdit from './pages/InvoiceEdit';
 import Invoices from './pages/Invoices';
 import LowStockPage from './pages/LowStock';
-import StockMovementsPage from './pages/StockMovements';
 import InvoiceForm from './pages/InvoiceForm';
 import NotFound from './pages/NotFound';
+import PurchasesPage from './pages/Purchases';
+import ReportsPage from './pages/Reports';
+import SettingsPage from './pages/Settings';
 
 export default function App() {
   return (
     <Layout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/items" element={<ItemsPage />} />
-        <Route path="/items/new" element={<ItemForm />} />
-        <Route path="/items/:id/edit" element={<ItemForm />} />
+        <Route path="/items-stock" element={<ItemsStock />} />
+        <Route
+          path="/items"
+          element={<Navigate to="/items-stock?tab=items" replace />}
+        />
+        <Route
+          path="/stock-movements"
+          element={<Navigate to="/items-stock?tab=stock" replace />}
+        />
         <Route path="/parties" element={<PartiesPage />} />
-        <Route path="/parties/new" element={<PartyForm />} />
-        <Route path="/parties/:id/edit" element={<PartyForm />} />
         <Route path="/parties/:id/ledger" element={<PartyLedger />} />
-        <Route path="/invoices" element={<Invoices />} />
-        <Route path="/invoices/new" element={<InvoiceForm />} />
-        <Route path="/invoices/:id" element={<InvoiceView />} />
-        <Route path="/invoices/:id/edit" element={<InvoiceEdit />} />
-        <Route path="/stock-movements" element={<StockMovementsPage />} />
+        <Route path="/sales/new" element={<InvoiceForm />} />
+        <Route path="/sales/invoices" element={<Invoices />} />
+        <Route path="/sales/invoices/:id" element={<InvoiceView />} />
+        <Route path="/sales/invoices/:id/edit" element={<InvoiceEdit />} />
         <Route path="/low-stock" element={<LowStockPage />} />
+        <Route path="/purchases" element={<PurchasesPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>

@@ -12,13 +12,13 @@ export default function NotFound() {
       <div className="flex gap-3 justify-center">
         <Link
           to="/"
-          className="px-6 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition"
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
         >
           Back to Home
         </Link>
         <Link
-          to="/items"
-          className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
+          to="/items-stock"
+          className="px-6 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition"
         >
           View Items
         </Link>
@@ -26,3 +26,6 @@ export default function NotFound() {
     </div>
   );
 }
+
+
+

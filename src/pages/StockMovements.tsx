@@ -3,7 +3,7 @@ import { useInvoices } from '../hooks/useInvoices';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
-export default function StockMovementsPage() {
+export default function StockMovementsPanel() {
   const { items } = useItems();
   const { movements } = useInvoices();
 
@@ -23,11 +23,6 @@ export default function StockMovementsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Stock Movements</h1>
-        <p className="text-gray-600">Audit log of all stock in/out transactions.</p>
-      </div>
-
       <Card>
         <CardHeader>
           <CardTitle>Stock Movements</CardTitle>
@@ -37,12 +32,12 @@ export default function StockMovementsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-center">Reference</TableHead>
-                  <TableHead className="text-right">Balance After</TableHead>
+                  <TableHead className='w-24'>Date</TableHead>
+                  <TableHead className='w-32'>Item</TableHead>
+                  <TableHead className='w-20'>Type</TableHead>
+                  <TableHead className="text-right w-16">Qty</TableHead>
+                  <TableHead className="text-center w-20">Reference</TableHead>
+                  <TableHead className="text-right w-24">Balance After</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -78,3 +73,4 @@ export default function StockMovementsPage() {
     </div>
   );
 }
+

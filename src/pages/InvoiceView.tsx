@@ -16,7 +16,7 @@ export default function InvoiceView() {
           <CardTitle>Invoice Not Found</CardTitle>
         </CardHeader>
         <CardContent>
-          <Link to="/invoices/new" className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+          <Link to="/sales/new" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
             Create New Invoice
           </Link>
         </CardContent>
@@ -35,7 +35,7 @@ export default function InvoiceView() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Link to="/" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+        <Link to="/" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
           ← Back
         </Link>
         <div className="flex gap-2">
@@ -92,11 +92,11 @@ export default function InvoiceView() {
           <TableHeader>
             <TableRow>
               <TableHead>Item</TableHead>
-              <TableHead className="text-right">Qty</TableHead>
-              <TableHead className="text-right">Rate</TableHead>
-              <TableHead className="text-right">Discount</TableHead>
-              <TableHead className="text-center">GST</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
+              <TableHead className="text-right w-16">Qty</TableHead>
+              <TableHead className="text-right w-20">Rate</TableHead>
+              <TableHead className="text-right w-20">Discount %</TableHead>
+              <TableHead className="text-center w-16">GST</TableHead>
+              <TableHead className="text-right w-24">Amount</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -108,7 +108,7 @@ export default function InvoiceView() {
                   {item.rate.toLocaleString(undefined, { minimumFractionDigits: 2 })}
                 </TableCell>
                 <TableCell className="text-right">
-                  {item.discount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                  {item.discountPercent ?? 0}%
                 </TableCell>
                 <TableCell className="text-center">{item.gstRate}%</TableCell>
                 <TableCell className="text-right font-medium">
@@ -119,7 +119,7 @@ export default function InvoiceView() {
           </TableBody>
         </Table>
 
-        <div className="flex justify-between border-t border-input pt-6">
+        <div className="flex justify-between border-t border-gray-200 pt-6">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">Subtotal</span>
@@ -154,7 +154,7 @@ export default function InvoiceView() {
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-input flex justify-between text-sm">
+        <div className="mt-8 pt-6 border-t border-gray-200 flex justify-between text-sm">
           <div>
             <div className="text-gray-600">Amount Received</div>
             <div className="font-medium text-gray-900">
@@ -172,3 +172,6 @@ export default function InvoiceView() {
     </div>
   );
 }
+
+
+

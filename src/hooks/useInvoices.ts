@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import type { Invoice, StockMovement, PaymentMode } from '../lib/types';
 import { getStorage, setStorage, generateId, nowISO } from '../lib/storage';
 import { STORAGE_KEYS } from '../lib/constants';
-import { statusFrom } from '../lib/invoiceCalc';
+import { normalizeInvoiceItem, statusFrom } from '../lib/invoiceCalc';
 
 export function useInvoices() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
@@ -10,7 +10,13 @@ export function useInvoices() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setInvoices(getStorage(STORAGE_KEYS.INVOICES, []));
+    const stored = getStorage(STORAGE_KEYS.INVOICES, []);
+    setInvoices(
+      stored.map((inv) => ({
+        ...inv,
+        items: inv.items.map(normalizeInvoiceItem),
+      }))
+    );
     setMovements(getStorage(STORAGE_KEYS.STOCK_MOVEMENTS, []));
     setLoading(false);
   }, []);
@@ -101,7 +107,8 @@ export function useInvoices() {
     addMovement,
     recordPayment,
     updateInvoice,
-    setInvoices,
-    setMovements,
+    // Persisting versions — update state AND localStorage
+    setInvoices: saveInvoices,
+    setMovements: saveMovements,
   };
 }

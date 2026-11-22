@@ -4,6 +4,7 @@ import { useMemo } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { cn } from '@/lib/utils';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 
 export default function PartyLedger() {
@@ -19,7 +20,7 @@ export default function PartyLedger() {
           <CardTitle>Party Not Found</CardTitle>
         </CardHeader>
         <CardContent>
-          <Link to="/parties" className="mt-4 inline-block px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700">
+          <Link to="/parties" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
             Back to Parties
           </Link>
         </CardContent>
@@ -27,18 +28,31 @@ export default function PartyLedger() {
     );
   }
 
+  // Get party's invoices sorted by date (newest first for display)
   const partyInvoices = useMemo(
     () => invoices.filter((inv) => inv.partyId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)),
+    [invoices, id]
+  );
+
+  // Get invoices sorted chronologically (oldest first) for running balance calculation
+  const partyInvoicesChronological = useMemo(
+    () => invoices.filter((inv) => inv.partyId === id).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()),
     [invoices, id]
   );
 
   const totalBilled = partyInvoices.reduce((sum, inv) => sum + inv.total, 0);
   const totalReceived = partyInvoices.reduce((sum, inv) => sum + inv.amountReceived, 0);
 
+  // Calculate running outstanding balance based on actual transaction history
+  // This ensures ledger accuracy even if party.currentOutstanding is stale
+  const calculatedOutstanding = useMemo(() => {
+    return party.openingOutstanding + totalBilled - totalReceived;
+  }, [party.openingOutstanding, totalBilled, totalReceived]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <Link to="/parties" className="text-indigo-600 hover:text-indigo-800 text-sm font-medium">
+        <Link to="/parties" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
           ← Back to Parties
         </Link>
         <h1 className="text-2xl font-bold text-gray-900">Party Ledger</h1>
@@ -55,33 +69,40 @@ export default function PartyLedger() {
             <Card>
               <CardContent className="p-4">
                 <p className="text-xs font-semibold text-blue-700 uppercase tracking-wider">
-                  Total Billed
+                  Opening Balance
                 </p>
                 <p className="text-lg font-bold text-gray-900 mt-1">
-                  {totalBilled.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
+                  {party.openingOutstanding.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-xs font-semibold text-green-700 uppercase tracking-wider">
-                  Total Received
+                  Total Added (Invoices)
                 </p>
                 <p className="text-lg font-bold text-gray-900 mt-1">
-                  {totalReceived.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
+                  +{totalBilled.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
                 </p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="p-4">
                 <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">
-                  Current Outstanding
+                  Total Outstanding
                 </p>
-                <p className="text-lg font-bold text-gray-900 mt-1">
-                  {party.currentOutstanding.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
+                <p className={`text-lg font-bold mt-1 ${calculatedOutstanding < 0 ? 'text-green-600' : calculatedOutstanding > 0 ? 'text-red-600' : 'text-gray-900'}`}>
+                  {calculatedOutstanding.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
                 </p>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-gray-200">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Total Received (Payments):</span>
+              <span className="font-medium text-green-600">-{totalReceived.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}</span>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -97,10 +118,10 @@ export default function PartyLedger() {
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>Invoice No.</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                  <TableHead className="text-right">Received</TableHead>
-                  <TableHead className="text-right">Balance</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right w-24">Total</TableHead>
+                  <TableHead className="text-right w-24">Received</TableHead>
+                  <TableHead className="text-right w-24">Balance</TableHead>
+                  <TableHead className="text-center w-20">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -111,12 +132,14 @@ export default function PartyLedger() {
                     </TableCell>
                   </TableRow>
                 ) : (
+                  // Display in reverse chronological order (newest first) but calculate balance chronologically
                   partyInvoices.map((inv) => {
-                    const runningBalance =
-                      partyInvoices.slice(0, partyInvoices.indexOf(inv) + 1).reduce(
-                        (sum, x) => sum + x.total - x.amountReceived,
-                        0
-                      );
+                    // Find position in chronological order to get correct running balance
+                    const chronoIndex = partyInvoicesChronological.findIndex(i => i.id === inv.id);
+                    const runningBalance = partyInvoicesChronological
+                      .slice(0, chronoIndex + 1)
+                      .reduce((sum, x) => sum + x.total - x.amountReceived, 0) + party.openingOutstanding;
+                    
                     const statusColor: Record<string, string> = {
                       Paid: 'bg-green-100 text-green-700',
                       'Partially Paid': 'bg-amber-100 text-amber-700',
@@ -126,7 +149,7 @@ export default function PartyLedger() {
                       <TableRow key={inv.id}>
                         <TableCell>{new Date(inv.date).toLocaleDateString()}</TableCell>
                         <TableCell className="font-medium">
-                          <Link to={`/invoices/${inv.id}`}>{inv.invoiceNo}</Link>
+                          <Link to={`/sales/invoices/${inv.id}`}>{inv.invoiceNo}</Link>
                         </TableCell>
                         <TableCell className="text-right">
                           {inv.total.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
@@ -138,7 +161,9 @@ export default function PartyLedger() {
                           {runningBalance.toLocaleString(undefined, { style: 'currency', currency: 'INR' })}
                         </TableCell>
                         <TableCell>
-                          <Badge className={statusColor[inv.status]}>{inv.status}</Badge>
+                          <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
+                            {inv.status}
+                          </Badge>
                         </TableCell>
                       </TableRow>
                     );
@@ -152,3 +177,5 @@ export default function PartyLedger() {
     </div>
   );
 }
+
+

@@ -8,7 +8,7 @@ const Table = React.forwardRef<
   <div className="overflow-auto">
     <table
       ref={ref}
-      className={cn('w-full caption-bottom text-sm', className)}
+      className={cn('w-full caption-bottom text-sm border-collapse', className)}
       {...props}
     />
   </div>
@@ -21,7 +21,7 @@ const TableHeader = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <thead
     ref={ref}
-    className={cn('[&_tr]:border-b', className)}
+    className={cn('[&_tr]:border-b [&_tr]:bg-gray-50 [&_tr]:text-gray-600', className)}
     {...props}
   />
 ));
@@ -46,7 +46,7 @@ const TableFooter = React.forwardRef<
   <tfoot
     ref={ref}
     className={cn(
-      'border-t bg-muted/50 [&_tr]:border-b [&_tr:last-child]:border-0',
+      'border-t border-gray-200 bg-gray-50 [&_tr]:border-b [&_tr:last-child]:border-0',
       className
     )}
     {...props}
@@ -61,7 +61,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+      'border-b border-gray-200 transition-colors hover:bg-gray-50',
       className
     )}
     {...props}
@@ -76,7 +76,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      'text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0',
+      'text-left align-middle font-medium text-xs text-gray-600 uppercase tracking-wider p-3 [&:has([role=checkbox])]:pr-0',
       className
     )}
     {...props}
@@ -91,7 +91,7 @@ const TableCell = React.forwardRef<
   <td
     ref={ref}
     className={cn(
-      'align-middle p-4 [&:has([role=checkbox])]:pr-0',
+      'align-middle p-4 text-sm text-gray-700 [&:has([role=checkbox])]:pr-0',
       className
     )}
     {...props}
@@ -105,7 +105,7 @@ const TableCaption = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <caption
     ref={ref}
-    className={cn('mt-4 text-sm text-muted-foreground', className)}
+    className={cn('mt-4 text-sm text-gray-500', className)}
     {...props}
   />
 ));
@@ -121,3 +121,6 @@ export {
   TableCell,
   TableCaption,
 };
+
+
+

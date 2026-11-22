@@ -45,7 +45,7 @@ const Sidebar = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn("fixed left-0 top-0 z-50 h-screen w-64 border-r border-input bg-sidebar", className)}
+    className={cn("fixed left-0 top-0 z-50 h-screen w-64 border-r border-gray-200 bg-sidebar", className)}
     {...props}
   />
 ));
@@ -197,3 +197,6 @@ export {
   SidebarMenuItem,
   SidebarFooter,
 };
+
+
+

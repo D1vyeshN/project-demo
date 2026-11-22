@@ -6,6 +6,8 @@ dist/
 build/
 *.local
 
+.playwright-mcp
+
 # Environment files (never commit secrets)
 .env
 .env.local
