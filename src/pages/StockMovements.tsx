@@ -3,8 +3,8 @@ import { useItems } from '../hooks/useItems';
 import { useInvoices } from '../hooks/useInvoices';
 import { usePurchases } from '../hooks/usePurchases';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Label } from '../components/ui/label';
+import { DataTable } from '../components/ui/data-table';
 
 export default function StockMovementsPanel() {
   const { items } = useItems();
@@ -100,7 +100,10 @@ export default function StockMovementsPanel() {
             {scopeItem ? `— ${scopeItem.name} (${scopeItem.sku})` : ''}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pb-3">
+          <p className="text-sm text-gray-600">
+            Track item-wise stock in and out with dates and references.
+          </p>
           <Label htmlFor="itemScope" className="mb-1.5 block text-sm">
             View movements for item
           </Label>
@@ -166,54 +169,63 @@ export default function StockMovementsPanel() {
           <CardTitle>Movements</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">Date</TableHead>
-                  <TableHead className="w-20">Type</TableHead>
-                  <TableHead className="w-24">Ref No</TableHead>
-                  <TableHead className="text-center w-16">In Qty</TableHead>
-                  <TableHead className="text-center w-16">Out Qty</TableHead>
-                  <TableHead className="text-right w-24">Balance</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {scopeItem && rows.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center text-gray-500">
-                      No stock movements recorded yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  rows.map((r) => (
-                    <TableRow key={`${r.date}-${r.type}-${r.refId}`}>
-                      <TableCell>{r.date}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-semibold border ${typeColor[r.type]}`}
-                        >
-                          {r.type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-center text-gray-700 text-sm">
-                        {r.refId}
-                      </TableCell>
-                      <TableCell className="text-center text-green-600">
-                        {r.inQty}
-                      </TableCell>
-                      <TableCell className="text-center text-red-600">
-                        {r.outQty}
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-gray-900">
-                        {r.balance}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          {scopeItem ? (
+            <DataTable
+              columns={[
+                {
+                  key: 'date',
+                  label: 'Date',
+                  headerClassName: 'w-24',
+                  cellClassName: '',
+                },
+                {
+                  key: 'type',
+                  label: 'Type',
+                  headerClassName: 'w-20',
+                  cellClassName: '',
+                  render: (r: { type: string }) => (
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-semibold border ${typeColor[r.type]}`}
+                    >
+                      {r.type}
+                    </span>
+                  ),
+                },
+                {
+                  key: 'refId',
+                  label: 'Ref No',
+                  headerClassName: 'w-24',
+                  cellClassName: 'text-center text-gray-700 text-sm',
+                },
+                {
+                  key: 'inQty',
+                  label: 'In Qty',
+                  headerClassName: 'text-center w-16',
+                  cellClassName: 'text-center text-green-600',
+                },
+                {
+                  key: 'outQty',
+                  label: 'Out Qty',
+                  headerClassName: 'text-center w-16',
+                  cellClassName: 'text-center text-red-600',
+                },
+                {
+                  key: 'balance',
+                  label: 'Balance',
+                  headerClassName: 'text-right w-24',
+                  cellClassName: 'text-right font-medium text-gray-900',
+                },
+              ]}
+              data={rows}
+              pageSize={10}
+              emptyMessage="No stock movements recorded yet."
+              emptyColSpan={6}
+            />
+          ) : (
+            <div className="text-xs text-gray-500">
+              Select an item above to view its per-item stock movements (In Qty / Out Qty).
+            </div>
+          )}
         </CardContent>
       </Card>
 

@@ -1,7 +1,6 @@
 import { useItems } from '../hooks/useItems';
 import { AlertTriangle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
+import { DataTable } from '../components/ui/data-table';
 
 export default function LowStockPage() {
   const { items } = useItems();
@@ -16,47 +15,40 @@ export default function LowStockPage() {
         </p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Low Stock Items</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-10">⚠</TableHead>
-                  <TableHead>Item</TableHead>
-                  <TableHead className="text-right w-24">Current Stock</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {lowStock.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="h-24 text-center text-green-600 font-medium">
-                      ✅ All items are well stocked. No low-stock alerts.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  lowStock.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell className="text-center text-red-600">
-                        <AlertTriangle className="h-4 w-4" />
-                      </TableCell>
-                      <TableCell className="font-medium text-gray-900">
-                        {it.name}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-red-700">
-                        {it.currentStock}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className='flex flex-col gap-4'>
+        <div>
+          <h2 className='text-xl'>Low Stock Items</h2>
+        </div>
+        <div>
+          <DataTable
+            columns={[
+              {
+                key: 'alert',
+                label: '⚠',
+                headerClassName: 'w-20',
+                cellClassName: 'text-center text-red-600',
+                render: () => <AlertTriangle className="h-4 w-4" />,
+              },
+              {
+                key: 'name',
+                label: 'Item',
+                headerClassName: 'w-42',
+                cellClassName: 'font-medium text-gray-900',
+              },
+              {
+                key: 'currentStock',
+                label: 'Current Stock',
+                headerClassName: 'text-left w-42',
+                cellClassName: 'text-left font-semibold text-red-700',
+              },
+            ]}
+            data={lowStock}
+            pageSize={10}
+            emptyMessage="✅ All items are well stocked. No low-stock alerts."
+            emptyColSpan={3}
+          />
+        </div>
+      </div>
     </div>
   );
 }

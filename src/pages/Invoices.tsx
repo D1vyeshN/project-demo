@@ -2,13 +2,24 @@ import { useMemo, useState } from 'react';
 import { useInvoices } from '../hooks/useInvoices';
 import { useParties } from '../hooks/useParties';
 import { Link } from 'react-router-dom';
-import { Card, CardContent, CardHeader } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-import { Edit2, Search as SearchIcon, Eye, Plus } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import {
+  Search as SearchIcon,
+  Edit2,
+  Eye,
+  Plus,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { input as Input } from '../components/ui/input';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { DataTable } from '../components/ui/data-table';
+import type { Invoice } from '../lib/types';
 
 const PAGE_SIZE = 5;
 
@@ -29,7 +40,6 @@ export default function Invoices() {
 
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('All Status');
-  const [page, setPage] = useState(1);
 
   const partyMap = new Map(parties.map((p) => [p.id, p.name]));
 
@@ -52,26 +62,112 @@ export default function Invoices() {
     (a, b) => b.createdAt.localeCompare(a.createdAt)
   );
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const startIdx = (safePage - 1) * PAGE_SIZE;
-  const pageItems = sorted.slice(startIdx, startIdx + PAGE_SIZE);
-  const startNum = sorted.length === 0 ? 0 : startIdx + 1;
-  const endNum = Math.min(startIdx + PAGE_SIZE, sorted.length);
+  const currency = new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  });
+
+  const formatINR = (value: number) => currency.format(value);
+
+  const columns = [
+    {
+      key: 'invoiceNo',
+      label: 'Invoice No.',
+      headerClassName: 'w-24',
+      cellClassName: 'font-medium text-gray-900',
+      render: (inv: Invoice) => inv.invoiceNo,
+    },
+    {
+      key: 'date',
+      label: 'Date',
+      headerClassName: 'w-20',
+      cellClassName: 'text-gray-600',
+      render: (inv: Invoice) => new Date(inv.date).toLocaleDateString(),
+    },
+    {
+      key: 'partyName',
+      label: 'Party',
+      headerClassName: 'w-24',
+      cellClassName: 'text-gray-600',
+      render: (inv: Invoice) => partyMap.get(inv.partyId) || inv.partyName,
+    },
+    {
+      key: 'total',
+      label: 'Total',
+      headerClassName: 'text-right w-24',
+      cellClassName: 'text-right font-medium text-gray-900',
+      render: (inv: Invoice) => formatINR(inv.total),
+    },
+    {
+      key: 'amountReceived',
+      label: 'Received',
+      headerClassName: 'text-right w-24',
+      cellClassName: 'text-right text-gray-600',
+      render: (inv: Invoice) => formatINR(inv.amountReceived),
+    },
+    {
+      key: 'balanceDue',
+      label: 'Balance Due',
+      headerClassName: 'text-right w-24',
+      cellClassName: 'text-right font-medium text-gray-900',
+      render: (inv: Invoice) => formatINR(inv.total - inv.amountReceived),
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      headerClassName: 'text-center w-20',
+      cellClassName: 'text-center',
+      render: (inv: Invoice) => (
+        <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
+          {inv.status}
+        </Badge>
+      ),
+    },
+    {
+      key: 'actions',
+      label: 'Action',
+      headerClassName: 'text-right w-20',
+      cellClassName: 'text-right',
+      render: (inv: Invoice) => (
+        <div className="flex items-center justify-end gap-1">
+          <Link
+            to={`/sales/invoices/${inv.id}`}
+            className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
+            title="View"
+          >
+            <Eye className="w-4 h-4" />
+          </Link>
+          <Link
+            to={`/sales/invoices/${inv.id}/edit`}
+            className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+            title="Edit"
+          >
+            <Edit2 className="w-4 h-4" />
+          </Link>
+        </div>
+      ),
+    },
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Sales Invoices</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Sales Invoices</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            View all sales invoices with payment status and balance due.
+          </p>
+        </div>
         <Link to="/sales/new" className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium inline-flex items-center gap-1">
           <Plus className="h-4 w-4" /> Add Invoice
         </Link>
       </div>
 
-      <Card className="border-gray-200">
-        <CardHeader className="flex flex-row flex-wrap items-center gap-3 space-y-0">
-          <div className="relative w-full max-w-md flex-1 min-w-[220px]">
+      <div className="max-h-[70vh] flex flex-col gap-4">
+        <div className="flex w-full flex-row flex-wrap items-center gap-3 space-y-0">
+          <div className="relative w-3/5 max-w-md flex-1 min-w-[220px]">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <Input
               type="text"
@@ -80,140 +176,35 @@ export default function Invoices() {
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setPage(1);
               }}
             />
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Filter by status"
-            className={FILTER_SELECT_CLASS}
-          >
-            <option>All Status</option>
-            {INVOICE_STATUSES.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className='w-24'>Invoice No.</TableHead>
-                  <TableHead className='w-20'>Date</TableHead>
-                  <TableHead className='w-24'>Party</TableHead>
-                  <TableHead className="text-right w-24">Total</TableHead>
-                  <TableHead className="text-right w-24">Received</TableHead>
-                  <TableHead className="text-right w-24">Balance Due</TableHead>
-                  <TableHead className="text-center w-20">Status</TableHead>
-                  <TableHead className="text-right w-24">Action</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody className='border-x border-gray-200'>
-                {pageItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="h-24 text-center text-gray-500">
-                      No invoices found.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  pageItems.map((inv) => {
-                    const balanceDue = inv.total - inv.amountReceived;
-                    const partyName = partyMap.get(inv.partyId) || inv.partyName;
-                    return (
-                      <TableRow key={inv.id}>
-                        <TableCell className="font-medium text-gray-900">
-                          {inv.invoiceNo}
-                        </TableCell>
-                        <TableCell className="text-gray-600">
-                          {new Date(inv.date).toLocaleDateString()}
-                        </TableCell>
-                        <TableCell className="text-gray-600">{partyName}</TableCell>
-                        <TableCell className="text-right font-medium text-gray-900">
-                          ₹{inv.total.toLocaleString(undefined, { minimumFractionDigits: 0 })}
-                        </TableCell>
-                        <TableCell className="text-right text-gray-600">
-                          ₹{inv.amountReceived.toLocaleString(undefined, { minimumFractionDigits: 0 })}
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-gray-900">
-                          ₹{balanceDue.toLocaleString(undefined, { minimumFractionDigits: 0 })}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
-                            {inv.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <Link
-                              to={`/sales/invoices/${inv.id}`}
-                              className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition"
-                              title="View"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Link>
-                            <Link
-                              to={`/sales/invoices/${inv.id}/edit`}
-                              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
-                              title="Edit"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </Link>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-        <div className="border-t border-gray-200 p-4 bg-gray-50">
-          <div className="flex items-center justify-between text-xs text-gray-500">
-            <div>
-              Showing {startNum} to {endNum} of {sorted.length} invoices
-            </div>
-            <div className="flex items-center gap-1">
-              <button
-                disabled={safePage <= 1}
-                onClick={() => setPage(safePage - 1)}
-                aria-label="Previous page"
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+          <div className="w-2/5 flex gap-3">
+            <div className="w-1/2">
+              <Select
+                value={statusFilter}
+                onValueChange={(value: string) => setStatusFilter(value)}
+                aria-label="Filter by status"
               >
-                <ChevronLeft className="w-4 h-4" />
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                <button
-                  key={p}
-                  onClick={() => setPage(p)}
-                  className={cn(
-                    'h-8 w-8 rounded-md border text-sm font-medium transition',
-                    p === safePage
-                      ? 'border-blue-600 bg-blue-600 text-white'
-                      : 'border-gray-300 bg-white text-gray-600 hover:bg-gray-100'
-                  )}
-                >
-                  {p}
-                </button>
-              ))}
-              <button
-                disabled={safePage >= totalPages}
-                onClick={() => setPage(safePage + 1)}
-                aria-label="Next page"
-                className="flex h-8 w-8 items-center justify-center rounded-md border border-gray-300 bg-white text-gray-600 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
+                <SelectTrigger className={FILTER_SELECT_CLASS}>
+                  <SelectValue placeholder="All Status">
+                    {statusFilter}
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All Status">All Status</SelectItem>
+                  {INVOICE_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </div>
-      </Card>
+        <DataTable columns={columns as any} data={sorted} pageSize={PAGE_SIZE} />
+      </div>
     </div>
   );
 }

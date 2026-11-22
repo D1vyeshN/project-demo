@@ -1,7 +1,7 @@
-import * as React from 'react';
-import { Link, useLocation } from 'react-router-dom';
-import { useState } from 'react';
-import { cn } from '@/lib/utils';
+import * as React from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
 import {
   Home,
   Package,
@@ -13,69 +13,107 @@ import {
   Settings as SettingsIcon,
   ChevronDown,
   Menu as MenuIcon,
-} from 'lucide-react';
+  Trash2,
+  Download,
+} from "lucide-react";
+import { useItems } from "../hooks/useItems";
+import { useParties } from "../hooks/useParties";
+import { useInvoices } from "../hooks/useInvoices";
+import { usePurchases } from "../hooks/usePurchases";
+import { usePayments } from "../hooks/usePayments";
+import { useReturns } from "../hooks/useReturns";
+import { clearAllStorage, generateId, nowISO } from "../lib/storage";
+import {
+  generateTempItems,
+  generateTempParties,
+  generateTempInvoices,
+  generateTempPurchases,
+  generateTempPayments,
+  generateTempReturns,
+} from "../lib/tempData";
+import { Button } from "./ui/button";
+import { ConfirmDialog } from "./ui/confirm-dialog";
+import { toast } from "sonner";
 
 const sidebarItems = [
   {
-    label: 'Dashboard',
+    label: "Dashboard",
     icon: <Home className="w-4 h-4" />,
-    to: '/',
+    to: "/",
   },
   {
-    label: 'Items & Stock',
+    label: "Items & Stock",
     icon: <Package className="w-4 h-4" />,
-    to: '/items-stock',
+    to: "/items-stock",
   },
   {
-    label: 'Parties',
+    label: "Parties",
     icon: <User className="w-4 h-4" />,
     items: [
-      { label: 'Party Master', to: '/parties', icon: <Package className="w-3.5 h-3.5" /> },
+      {
+        label: "Party Master",
+        to: "/parties",
+        icon: <Package className="w-3.5 h-3.5" />,
+      },
     ],
   },
   {
-    label: 'Sales',
+    label: "Sales",
     icon: <DollarSign className="w-4 h-4" />,
     items: [
-      { label: 'Create Sale', to: '/sales/new', icon: <Package className="w-3.5 h-3.5" /> },
-      { label: 'Sale Invoices', to: '/sales/invoices', icon: <Package className="w-3.5 h-3.5" /> },
+      {
+        label: "Create Sale",
+        to: "/sales/new",
+        icon: <Package className="w-3.5 h-3.5" />,
+      },
+      {
+        label: "Sale Invoices",
+        to: "/sales/invoices",
+        icon: <Package className="w-3.5 h-3.5" />,
+      },
     ],
   },
   {
-    label: 'Purchases',
+    label: "Purchases",
     icon: <ShoppingCart className="w-4 h-4" />,
     items: [
-      { label: 'Purchase Orders', to: '/purchases', icon: <Package className="w-3.5 h-3.5" /> },
+      {
+        label: "Purchase Orders",
+        to: "/purchases",
+        icon: <Package className="w-3.5 h-3.5" />,
+      },
     ],
   },
   {
-    label: 'Inventory',
+    label: "Inventory",
     icon: <Inbox className="w-4 h-4" />,
     items: [
-      { label: 'Low Stock Alert', to: '/low-stock', icon: <Package className="w-3.5 h-3.5" /> },
+      {
+        label: "Low Stock Alert",
+        to: "/low-stock",
+        icon: <Package className="w-3.5 h-3.5" />,
+      },
     ],
   },
   {
-    label: 'Reports',
+    label: "Reports",
     icon: <BarChart3 className="w-4 h-4" />,
-    to: '/reports',
+    to: "/reports",
   },
   {
-    label: 'Settings',
+    label: "Settings",
     icon: <SettingsIcon className="w-4 h-4" />,
-    to: '/settings',
+    to: "/settings",
   },
 ];
 
 // All menu paths, flattened — used so the LONGEST matching path wins
 const allMenuPaths = sidebarItems.flatMap((section) =>
-  section.items
-    ? section.items.map((child) => child.to)
-    : [section.to]
+  section.items ? section.items.map((child) => child.to) : [section.to],
 );
 
 const matchesPath = (pathname: string, to: string) => {
-  if (to === '/') return pathname === '/';
+  if (to === "/") return pathname === "/";
   return pathname === to || pathname.startsWith(`${to}/`);
 };
 
@@ -83,7 +121,7 @@ const isActivePath = (pathname: string, to: string) => {
   if (!matchesPath(pathname, to)) return false;
   // Another, more specific menu path also matches → that one wins instead
   return !allMenuPaths.some(
-    (p) => p !== to && p.length > to.length && matchesPath(pathname, p)
+    (p) => p !== to && p.length > to.length && matchesPath(pathname, p),
   );
 };
 
@@ -92,7 +130,8 @@ const activeSectionLabels = (pathname: string) =>
   sidebarItems
     .filter(
       (section) =>
-        section.items?.some((child) => isActivePath(pathname, child.to)) ?? false
+        section.items?.some((child) => isActivePath(pathname, child.to)) ??
+        false,
     )
     .map((section) => section.label);
 
@@ -101,9 +140,85 @@ export default function SidebarComponent() {
   const [open, setOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(
-    () => new Set(activeSectionLabels(location.pathname))
+    () => new Set(activeSectionLabels(location.pathname)),
   );
   const { pathname } = location;
+  const { items, setItems } = useItems();
+  const { parties, setParties } = useParties();
+  const { setInvoices } = useInvoices();
+  const { setPurchases } = usePurchases();
+  const { setPayments } = usePayments();
+  const { setReturns } = useReturns();
+
+  // Show "Clear Data" if ANY master data exists (items OR parties)
+  const hasAnyData = items.length > 0 || parties.length > 0;
+
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
+
+  const handleLoadSeed = () => {
+    if (hasAnyData) {
+      toast.error("Master data already exists");
+      return;
+    }
+
+    const now = nowISO();
+    const tempItems = generateTempItems().map((it) => ({
+      ...it,
+      id: generateId(),
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const tempParties = generateTempParties().map((p) => ({
+      ...p,
+      id: generateId(),
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const tempInvoices = generateTempInvoices(tempParties).map((inv) => ({
+      ...inv,
+      id: generateId(),
+      createdAt: now,
+      updatedAt: now,
+    }));
+    const tempPurchases = generateTempPurchases().map((p) => ({
+      ...p,
+      id: generateId(),
+      createdAt: now,
+    }));
+    const tempPayments = generateTempPayments(tempParties).map((pay) => ({
+      ...pay,
+      id: generateId(),
+      createdAt: now,
+    }));
+    const tempReturns = generateTempReturns(tempParties).map((r) => ({
+      ...r,
+      id: generateId(),
+      createdAt: now,
+    }));
+    setItems(tempItems);
+    setParties(tempParties);
+    setInvoices(tempInvoices);
+    setPurchases(tempPurchases);
+    setPayments(tempPayments);
+    setReturns(tempReturns);
+
+    toast.success(
+      "Successfully loaded 10 items, 10 parties, 5 invoices, 5 purchases, 5 payments, 3 returns, and 5 stock movements as temporary data.",
+    );
+  };
+
+  const handleClearData = () => {
+    setClearConfirmOpen(true);
+  };
+
+  const handleConfirmClear = () => {
+    setClearConfirmOpen(false);
+    clearAllStorage();
+    setItems([]);
+    setParties([]);
+    toast.success("All data has been cleared.");
+    window.location.reload();
+  };
 
   const isActive = (to: string) => isActivePath(pathname, to);
 
@@ -151,7 +266,7 @@ export default function SidebarComponent() {
       <div
         className={cn(
           "fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm",
-          open ? "block" : "hidden"
+          open ? "block" : "hidden",
         )}
         onClick={() => setOpen(false)}
       />
@@ -162,12 +277,14 @@ export default function SidebarComponent() {
           <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white">
             H
           </div>
-          <span className={`font-bold text-lg tracking-tight ${collapsed ? 'hidden' : 'block'}`}>
+          <span
+            className={`font-bold text-lg tracking-tight ${collapsed ? "hidden" : "block"}`}
+          >
             HisabKitab
           </span>
         </div>
 
-        <div className="overflow-y-auto h-[calc(100vh-4rem)] px-2 py-2 space-y-0.5">
+        <div className="overflow-y-auto h-[calc(100vh-4rem)] px-2 py-2 space-y-0.5 bg-blue-200/10">
           {sidebarItems.map((section) => {
             if (section.items) {
               const isExpanded = expandedSections.has(section.label);
@@ -179,24 +296,31 @@ export default function SidebarComponent() {
                     onClick={() => toggleSection(section.label)}
                     className={`flex items-center justify-between w-full px-3 py-2 text-sm font-medium transition ${
                       isActiveSection
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                        ? "bg-blue-200/35 text-blue-700"
+                        : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                     }`}
                   >
                     <div className="flex items-center gap-2">
-                      {React.cloneElement(section.icon, { className: 'w-4 h-4 shrink-0' })}
-                      <span className={collapsed ? 'hidden' : 'block'}>
+                      {React.cloneElement(section.icon, {
+                        className: "w-4 h-4 shrink-0",
+                      })}
+                      <span className={collapsed ? "hidden" : "block"}>
                         {section.label}
                       </span>
                     </div>
                     <ChevronDown
                       className={cn(
-                        'w-3 h-3 shrink-0 transition-transform duration-200',
-                        isExpanded ? 'rotate-180' : ''
+                        "w-3 h-3 shrink-0 transition-transform duration-200",
+                        isExpanded ? "rotate-180" : "",
                       )}
                     />
                   </button>
-                  <div className={cn('pl-8 space-y-0.5', isExpanded ? '' : 'hidden')}>
+                  <div
+                    className={cn(
+                      "pl-8 space-y-0.5",
+                      isExpanded ? "" : "hidden",
+                    )}
+                  >
                     {section.items.map((item) => {
                       const active = isActive(item.to);
                       return (
@@ -204,16 +328,18 @@ export default function SidebarComponent() {
                           key={item.to}
                           to={item.to}
                           onClick={() => setOpen(false)}
-                          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg transition ${
+                          className={`flex items-center gap-2 mt-1 px-3 py-1.5 text-sm rounded-lg transition ${
                             active
-                              ? 'bg-blue-50 text-blue-700 font-medium'
-                              : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                              ? "bg-blue-200/75 text-blue-700 font-medium"
+                              : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                           }`}
                         >
-                          <span className="w-5 flex items-center justify-center shrink-0">
-                            {React.cloneElement(item.icon, { className: 'w-3.5 h-3.5' })}
-                          </span>
-                          <span className={collapsed ? 'hidden' : 'block'}>
+                          {/* <span className="w-5 flex items-center justify-center shrink-0">
+                            {React.cloneElement(item.icon, {
+                              className: "w-3.5 h-3.5",
+                            })}
+                          </span> */}
+                          <span className={collapsed ? "hidden" : "block"}>
                             {item.label}
                           </span>
                         </Link>
@@ -232,14 +358,14 @@ export default function SidebarComponent() {
                 onClick={() => setOpen(false)}
                 className={`flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition ${
                   active
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'
+                    ? "bg-blue-100 text-blue-700"
+                    : "text-gray-600 hover:bg-gray-200 hover:text-gray-900"
                 }`}
               >
                 <span className="w-5 flex items-center justify-center shrink-0">
-                  {React.cloneElement(section.icon, { className: 'w-4 h-4' })}
+                  {React.cloneElement(section.icon, { className: "w-4 h-4" })}
                 </span>
-                <span className={collapsed ? 'hidden' : 'block'}>
+                <span className={collapsed ? "hidden" : "block"}>
                   {section.label}
                 </span>
               </Link>
@@ -247,19 +373,44 @@ export default function SidebarComponent() {
           })}
         </div>
 
-        <div className="mt-auto border-t border-gray-200">
-          <div className="flex items-center gap-2 px-4 py-4">
-            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-medium text-xs">
-              A
-            </div>
-            <div className={collapsed ? 'hidden' : 'block'}>
-              <div className="text-sm font-medium text-gray-900">Admin</div>
-              <div className="text-xs text-gray-500">admin@hisabkitab.com</div>
+        <div className="mt-auto bg-blue-200/10">
+          <div className="flex flex-col gap-2 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <Button
+                variant="outline"
+                onClick={hasAnyData ? handleClearData : handleLoadSeed}
+                className={`w-full px-3 py-1.5 rounded-md text-sm font-medium border transition ${
+                  hasAnyData
+                    ? "border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    : "border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-800"
+                }`}
+              >
+                {hasAnyData ? (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Clear Data
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5 mr-1.5" /> Add Temp Data
+                  </>
+                )}
+              </Button>
             </div>
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        onOpenChange={setClearConfirmOpen}
+        title="Clear all data?"
+        description={
+          "Are you sure you want to clear ALL data? This will remove items, parties, invoices and stock movements. This cannot be undone."
+        }
+        onConfirm={handleConfirmClear}
+        confirmLabel="Clear Data"
+        cancelLabel="Cancel"
+        destructive
+      />
     </div>
   );
 }
-

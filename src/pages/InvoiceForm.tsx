@@ -32,7 +32,6 @@ import { DISCOUNT_PERCENTS, GST_RATES, PAYMENT_MODES } from '../lib/constants';
 import { cn } from '@/lib/utils';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { input as Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import {
@@ -51,6 +50,7 @@ import {
   TableRow,
 } from '../components/ui/table';
 import PartyModal from '../components/PartyModal';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 
 const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -265,8 +265,18 @@ export default function InvoiceForm() {
     amountReceived > 0 ||
     paymentRef.trim() !== '';
 
+  const [discardConfirmOpen, setDiscardConfirmOpen] = useState(false);
+
   const handleCancel = () => {
-    if (isDirty && !window.confirm('Discard this invoice?')) return;
+    if (isDirty) {
+      setDiscardConfirmOpen(true);
+      return;
+    }
+    navigate(isEdit ? `/sales/invoices/${invoiceId}` : '/sales/invoices');
+  };
+
+  const handleConfirmDiscard = () => {
+    setDiscardConfirmOpen(false);
     navigate(isEdit ? `/sales/invoices/${invoiceId}` : '/sales/invoices');
   };
 
@@ -441,19 +451,17 @@ export default function InvoiceForm() {
   }
   if (isEdit && !invoice) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Invoice Not Found</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Link
-            to="/sales/invoices"
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-          >
-            Back to Invoices
-          </Link>
-        </CardContent>
-      </Card>
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-2">
+          Invoice Not Found
+        </h2>
+        <Link
+          to="/sales/invoices"
+          className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+        >
+          Back to Invoices
+        </Link>
+      </div>
     );
   }
 
@@ -465,7 +473,7 @@ export default function InvoiceForm() {
           <h1 className="text-2xl font-bold text-gray-900">
             {isEdit ? `Edit Sales Invoice — ${invoiceNo}` : 'Create Sales Invoice'}
           </h1>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-sm text-gray-600">
             Select a party, add items and record the payment.
           </p>
         </div>
@@ -479,10 +487,10 @@ export default function InvoiceForm() {
       )}
 
       {/* Party + invoice meta */}
-      <Card className="mb-5">
-        <CardContent className="grid grid-cols-1 gap-5 p-5 lg:grid-cols-12">
+      <div className="mb-4 space-y-4 rounded-lg border border-gray-200 bg-white p-5">
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-12">
           <div className="lg:col-span-5">
-            <Label className="mb-1.5 block">
+            <Label className="mb-1.5 block text-xs text-gray-600 uppercase tracking-wide">
               Select Party <span className="text-red-500">*</span>
             </Label>
 
@@ -555,7 +563,7 @@ export default function InvoiceForm() {
               <Button
                 type="button"
                 variant="outline"
-                className="shrink-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700"
+                className="shrink-0 border-blue-200 text-blue-600 hover:bg-blue-50 hover:text-blue-700 h-9"
                 onClick={() => setPartyModalOpen(true)}
               >
                 <Plus className="mr-1 h-4 w-4" />
@@ -589,7 +597,7 @@ export default function InvoiceForm() {
           <div className="lg:col-span-4">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div>
-                <Label htmlFor="invoiceDate" className="mb-1.5 block">
+                <Label htmlFor="invoiceDate" className="mb-1.5 block text-xs text-gray-600 uppercase tracking-wide">
                   Invoice Date <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -601,21 +609,22 @@ export default function InvoiceForm() {
                     setInvoiceDate(value);
                     if (!dueDateTouched) setDueDate(value);
                   }}
+                  className="h-9"
                 />
               </div>
               <div>
-                <Label htmlFor="invoiceNo" className="mb-1.5 block">
+                <Label htmlFor="invoiceNo" className="mb-1.5 block text-xs text-gray-600 uppercase tracking-wide">
                   Invoice No
                 </Label>
                 <Input
                   id="invoiceNo"
                   readOnly
                   value={invoiceNo}
-                  className="bg-gray-50 text-gray-600"
+                  className="bg-gray-50 text-gray-600 h-9"
                 />
               </div>
               <div className="sm:col-span-2">
-                <Label htmlFor="dueDate" className="mb-1.5 block">
+                <Label htmlFor="dueDate" className="mb-1.5 block text-xs text-gray-600 uppercase tracking-wide">
                   Payment Due Date
                 </Label>
                 <Input
@@ -627,6 +636,7 @@ export default function InvoiceForm() {
                     setDueDate(e.target.value);
                     setDueDateTouched(true);
                   }}
+                  className="h-9"
                 />
                 <p className="mt-1 text-xs text-gray-500">
                   Defaults to the invoice date (same-day payment terms).
@@ -634,34 +644,31 @@ export default function InvoiceForm() {
               </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Invoice items */}
-      <Card className="mb-5">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Invoice Items</CardTitle>
-            <span className="text-sm text-gray-500">
-              {invoiceLines.length} item{invoiceLines.length === 1 ? '' : 's'}
-            </span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1" ref={itemBoxRef}>
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <Input
-                ref={itemSearchRef}
-                value={itemSearch}
-                onChange={(e) => {
-                  setItemSearch(e.target.value);
-                  setItemOpen(true);
-                }}
-                onFocus={() => setItemOpen(true)}
-                placeholder="Search by item name or SKU..."
-                className="pl-9"
-              />
+      <div className="mb-4 space-y-3 rounded-lg border border-gray-200 bg-white p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-gray-900">Invoice Items</h2>
+          <span className="text-sm text-gray-500">
+            {invoiceLines.length} item{invoiceLines.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1" ref={itemBoxRef}>
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <Input
+              ref={itemSearchRef}
+              value={itemSearch}
+              onChange={(e) => {
+                setItemSearch(e.target.value);
+                setItemOpen(true);
+              }}
+              onFocus={() => setItemOpen(true)}
+              placeholder="Search by item name or SKU..."
+              className="pl-9"
+            />
 
               {itemOpen && (
                 <div className="absolute z-30 mt-1 w-full overflow-hidden rounded-lg border border-input bg-popover shadow-lg">
@@ -906,170 +913,158 @@ export default function InvoiceForm() {
               </TableBody>
             </Table>
           </div>
-        </CardContent>
-      </Card>
+        </div>
 
       {/* Payment + summary (shown only when items added) */}
       {invoiceLines.length > 0 ? (
         <div className="grid gap-5 lg:grid-cols-12">
           {/* Payment Details */}
-          <Card className="lg:col-span-8">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">
-                Payment Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Row 1: Invoice Amount + Previous Outstanding */}
-              <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
-                <div>
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Invoice Amount
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-gray-900">
-                    {formatINR(total)}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Previous Outstanding
-                  </p>
-                  <p className="mt-1 text-lg font-bold text-amber-600">
-                    {formatINR(previousOutstanding)}
-                  </p>
-                </div>
-              </div>
-
-              {/* Row 2: Amount Received + Payment Mode */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="amountReceived" className="mb-1.5 block">
-                    Amount Received <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="amountReceived"
-                    type="number"
-                    min={0}
-                    step="0.01"
-                    value={amountReceived}
-                    onChange={(e) => {
-                      setAmountReceived(parseFloat(e.target.value) || 0);
-                      setError('');
-                    }}
-                    className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                </div>
-                <div>
-                  <Label className="mb-1.5 block">Payment Mode</Label>
-                  <Select
-                    value={paymentMode}
-                    onValueChange={(value) =>
-                      setPaymentMode(value as PaymentMode)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue>{paymentMode}</SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PAYMENT_MODES.map((mode) => (
-                        <SelectItem key={mode} value={mode}>
-                          {mode}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Row 3: Reference No */}
+          <div className="lg:col-span-8 space-y-4 rounded-lg border border-gray-200 bg-white p-5">
+            {/* Row 1: Invoice Amount + Previous Outstanding */}
+            <div className="grid grid-cols-2 gap-4 rounded-lg bg-gray-50 p-4">
               <div>
-                <Label htmlFor="paymentRef" className="mb-1.5 block">
-                  Reference No (Optional)
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Invoice Amount
+                </p>
+                <p className="mt-1 text-lg font-bold text-gray-900">
+                  {formatINR(total)}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                  Previous Outstanding
+                </p>
+                <p className="mt-1 text-lg font-bold text-amber-600">
+                  {formatINR(previousOutstanding)}
+                </p>
+              </div>
+            </div>
+
+            {/* Row 2: Amount Received + Payment Mode */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="amountReceived" className="mb-1.5 block">
+                  Amount Received <span className="text-red-500">*</span>
                 </Label>
                 <Input
-                  id="paymentRef"
-                  value={paymentRef}
-                  onChange={(e) => setPaymentRef(e.target.value)}
-                  placeholder="e.g. UPI / cheque reference"
+                  id="amountReceived"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={amountReceived}
+                  onChange={(e) => {
+                    setAmountReceived(parseFloat(e.target.value) || 0);
+                    setError('');
+                  }}
+                  className="[appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                 />
               </div>
+              <div>
+                <Label className="mb-1.5 block">Payment Mode</Label>
+                <Select
+                  value={paymentMode}
+                  onValueChange={(value) =>
+                    setPaymentMode(value as PaymentMode)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue>{paymentMode}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PAYMENT_MODES.map((mode) => (
+                      <SelectItem key={mode} value={mode}>
+                        {mode}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-              {/* Row 4: Status + Invoice Due */}
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-gray-100 pt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">Status</span>
-                  <Badge className={statusStyles[status]}>{status}</Badge>
-                </div>
-                <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-right">
-                  <p className="text-xs font-medium text-blue-700">Invoice Due</p>
-                  <p className="text-xl font-bold text-blue-700">
-                    {formatINR(balanceDue)}
+            {/* Row 3: Reference No */}
+            <div>
+              <Label htmlFor="paymentRef" className="mb-1.5 block">
+                Reference No (Optional)
+              </Label>
+              <Input
+                id="paymentRef"
+                value={paymentRef}
+                onChange={(e) => setPaymentRef(e.target.value)}
+                placeholder="e.g. UPI / cheque reference"
+              />
+            </div>
+
+            {/* Row 4: Status + Invoice Due */}
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-t border-gray-100 pt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-500">Status</span>
+                <Badge className={statusStyles[status]}>{status}</Badge>
+              </div>
+              <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-right">
+                <p className="text-xs font-medium text-blue-700">Invoice Due</p>
+                <p className="text-xl font-bold text-blue-700">
+                  {formatINR(balanceDue)}
+                </p>
+              </div>
+            </div>
+
+            {/* Row 5: Total Outstanding After Invoice */}
+            <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-green-800">
+                    Total Outstanding After Invoice
+                  </p>
+                  <p className="text-xs text-green-700">
+                    Previous outstanding + Invoice total − Amount received
                   </p>
                 </div>
+                <p className="text-xl font-bold text-green-700">
+                  {formatINR(outstandingAfter)}
+                </p>
               </div>
-
-              {/* Row 5: Total Outstanding After Invoice */}
-              <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-green-800">
-                      Total Outstanding After Invoice
-                    </p>
-                    <p className="text-xs text-green-700">
-                      Previous outstanding + Invoice total − Amount received
-                    </p>
-                  </div>
-                  <p className="text-xl font-bold text-green-700">
-                    {formatINR(outstandingAfter)}
-                  </p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
           {/* Invoice Summary */}
-          <Card className="lg:col-span-4 self-start lg:sticky lg:top-20">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base font-semibold">
-                Invoice Summary
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-                <span className="text-gray-600">Subtotal</span>
-                <span className="font-medium text-gray-900">
-                  {formatINR(subtotal)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-                <span className="text-gray-600">Discount (−)</span>
-                <span className="font-medium text-gray-900">
-                  −{formatINR(discount)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-                <span className="text-gray-600">Taxable Amount</span>
-                <span className="font-medium text-gray-900">
-                  {formatINR(taxableAmount)}
-                </span>
-              </div>
-              <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
-                <span className="text-gray-600">GST</span>
-                <span className="font-medium text-gray-900">
-                  {formatINR(gst)}
-                </span>
-              </div>
-              <div className="mt-3 flex items-center justify-between rounded-md bg-blue-100 px-3 py-3">
-                <span className="text-base font-semibold text-gray-900">
-                  Invoice Total
-                </span>
-                <span className="text-xl font-bold text-blue-800">
-                  {formatINR(total)}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+          <div className="lg:col-span-4 self-start lg:sticky lg:top-20 space-y-4 rounded-lg border border-gray-200 bg-white p-5">
+            <h3 className="text-base font-semibold text-gray-900 mb-3">
+              Invoice Summary
+            </h3>
+            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+              <span className="text-gray-600">Subtotal</span>
+              <span className="font-medium text-gray-900">
+                {formatINR(subtotal)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+              <span className="text-gray-600">Discount (−)</span>
+              <span className="font-medium text-gray-900">
+                −{formatINR(discount)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+              <span className="text-gray-600">Taxable Amount</span>
+              <span className="font-medium text-gray-900">
+                {formatINR(taxableAmount)}
+              </span>
+            </div>
+            <div className="flex items-center justify-between border-b border-gray-100 py-2.5 text-sm">
+              <span className="text-gray-600">GST</span>
+              <span className="font-medium text-gray-900">
+                {formatINR(gst)}
+              </span>
+            </div>
+            <div className="mt-3 flex items-center justify-between rounded-md bg-blue-100 px-3 py-3">
+              <span className="text-base font-semibold text-gray-900">
+                Invoice Total
+              </span>
+              <span className="text-xl font-bold text-blue-800">
+                {formatINR(total)}
+              </span>
+            </div>
+            </div>
+          </div>
       ) : (
         <div className="text-center py-5 text-gray-500">
           <p className="text-xs mt-1">Add items above to see payment details and summary.</p>
@@ -1093,6 +1088,15 @@ export default function InvoiceForm() {
         onSaved={(created) => {
           selectParty(created);
         }}
+      />
+      <ConfirmDialog
+        open={discardConfirmOpen}
+        onOpenChange={setDiscardConfirmOpen}
+        title="Discard invoice?"
+        description="Discard this invoice?"
+        onConfirm={handleConfirmDiscard}
+        confirmLabel="Discard"
+        cancelLabel="Cancel"
       />
     </div>
   );

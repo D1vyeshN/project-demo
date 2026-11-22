@@ -7,14 +7,7 @@ import { usePayments } from '../hooks/usePayments';
 import { useReturns } from '../hooks/useReturns';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
-
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  });
+import { DataTable } from '../components/ui/data-table';
 
 const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -166,10 +159,15 @@ export default function PartyLedger() {
   return (
     <div className="pb-10 space-y-6">
       <div className="flex items-center justify-between">
-        <Link to="/parties" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
-          ← Back to Parties
-        </Link>
-        <h1 className="text-2xl font-bold text-gray-900">Party Ledger</h1>
+        <div>
+          <Link to="/parties" className="text-blue-600 hover:text-blue-700 text-sm font-medium">
+            ← Back to Parties
+          </Link>
+          <h1 className="text-2xl font-bold text-gray-900">Party Ledger</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            View party transaction history with running balance.
+          </p>
+        </div>
       </div>
 
       {/* KPI cards */}
@@ -235,48 +233,60 @@ export default function PartyLedger() {
           <CardTitle>Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">Date</TableHead>
-                  <TableHead className="w-24">Type</TableHead>
-                  <TableHead className="w-24">Ref No</TableHead>
-                  <TableHead className="text-right w-24">Amount (₹)</TableHead>
-                  <TableHead className="text-right w-24">Balance (₹)</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ledger.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="h-24 text-center text-gray-500">
-                      No transactions yet.
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  ledger.map((row) => (
-                    <TableRow key={`${row.date}-${row.refNo}-${row.balance}`}>
-                      <TableCell>{formatDate(row.date)}</TableCell>
-                      <TableCell>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-semibold border ${typeColor[row.type]}`}
-                        >
-                          {row.type}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-gray-600 text-sm">{row.refNo}</TableCell>
-                      <TableCell className={`text-right font-medium ${row.amount >= 0 ? 'text-red-600' : 'text-green-600'}`}>
-                        {row.amount >= 0 ? `+${formatINR(row.amount)}` : `-${formatINR(Math.abs(row.amount))}`}
-                      </TableCell>
-                      <TableCell className={`text-right font-medium ${row.balance > 0 ? 'text-red-600' : row.balance < 0 ? 'text-green-600' : 'text-gray-900'}`}>
-                        {formatINR(row.balance)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </div>
+          <DataTable
+            columns={[
+              {
+                key: 'date',
+                label: 'Date',
+                headerClassName: 'w-24',
+                cellClassName: '',
+                render: (row: LedgerRow) =>
+                  new Date(row.date).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short',
+                    year: 'numeric',
+                  }),
+              },
+              {
+                key: 'type',
+                label: 'Type',
+                headerClassName: 'w-24',
+                cellClassName: '',
+                render: (row: LedgerRow) => (
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs font-semibold border ${typeColor[row.type]}`}
+                  >
+                    {row.type}
+                  </span>
+                ),
+              },
+              {
+                key: 'refNo',
+                label: 'Ref No',
+                headerClassName: 'w-24',
+                cellClassName: 'text-gray-600 text-sm',
+              },
+              {
+                key: 'amount',
+                label: 'Amount (₹)',
+                headerClassName: 'text-right w-24',
+                cellClassName: 'text-right font-medium',
+                render: (row: LedgerRow) =>
+                  row.amount >= 0
+                    ? `+${formatINR(row.amount)}`
+                    : `-${formatINR(Math.abs(row.amount))}`,
+              },
+              {
+                key: 'balance',
+                label: 'Balance (₹)',
+                headerClassName: 'text-right w-24',
+                cellClassName: 'text-right font-medium',
+                render: (row: LedgerRow) => formatINR(row.balance),
+              },
+            ]}
+            data={ledger}
+            pageSize={10}
+          />
         </CardContent>
       </Card>
     </div>

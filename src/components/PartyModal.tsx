@@ -5,6 +5,7 @@ import { CardContent } from '../components/ui/card';
 import { input as Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Dialog, DialogContent, DialogDescription, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { ConfirmDialog } from '../components/ui/confirm-dialog';
 import type { Party } from '../lib/types';
 
 type PartyModalProps = {
@@ -40,12 +41,21 @@ export default function PartyModal({ open, onOpenChange, partyId, onSaved }: Par
   const [form, setForm] = useState<PartyFormData>({ ...emptyPartyForm });
   const [error, setError] = useState('');
   const [isDirty, setIsDirty] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   // Handle cancel/close with dirty check
   const handleClose = useCallback(() => {
-    if (isDirty && !window.confirm('You have unsaved changes. Discard them?')) return;
+    if (isDirty) {
+      setConfirmOpen(true);
+      return;
+    }
     onOpenChange(false);
   }, [isDirty, onOpenChange]);
+
+  const handleConfirmClose = useCallback(() => {
+    setConfirmOpen(false);
+    onOpenChange(false);
+  }, [onOpenChange]);
 
   // Helper to properly compare form with original (avoids JSON.stringify issues)
   const isFormDirty = useCallback((formData: PartyFormData, orig: Partial<Pick<Party, 'name' | 'phone' | 'gstin' | 'address' | 'openingOutstanding'>>): boolean => {
@@ -125,6 +135,7 @@ export default function PartyModal({ open, onOpenChange, partyId, onSaved }: Par
   if (loading) return null;
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogTrigger asChild>
         <span />
@@ -226,5 +237,15 @@ export default function PartyModal({ open, onOpenChange, partyId, onSaved }: Par
         </CardContent>
       </DialogContent>
     </Dialog>
+    <ConfirmDialog
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      title="Discard changes?"
+      description="You have unsaved changes. Discard them?"
+      onConfirm={handleConfirmClose}
+      confirmLabel="Discard"
+      cancelLabel="Cancel"
+    />
+    </>
   );
 }
