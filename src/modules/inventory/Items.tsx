@@ -11,8 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
-import { Search as SearchIcon, Plus, Edit2, Trash2 } from 'lucide-react';
+import {
+  Search as SearchIcon,
+  Plus,
+  Edit2,
+  Trash2,
+  BarChart3,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import ItemModal from './ItemModal';
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { DataTable } from '@/shared/ui/data-table';
@@ -29,6 +36,8 @@ const STOCK_STATUSES = ["In Stock", "Out of Stock"] as const;
 export default function ItemsPage() {
   const { items, loading, deleteItem } = useItems();
   const { invoices } = useInvoices();
+  const [, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [statusFilter, setStatusFilter] = useState("All Status");
@@ -185,6 +194,16 @@ export default function ItemsPage() {
               title="Edit"
             >
               <Edit2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                setSearchParams({ item: it.id });
+                navigate(`/stock-movements?item=${it.id}`);
+              }}
+              className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition"
+              title="View Stock Movements"
+            >
+              <BarChart3 className="w-4 h-4" />
             </button>
             <button
               onClick={() => handleDelete(it.id)}

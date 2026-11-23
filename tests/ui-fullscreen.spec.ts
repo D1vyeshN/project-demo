@@ -66,7 +66,7 @@ test.describe('UI Fullscreen Mode Tests', () => {
       await firstInvoice.first().click();
       await page.waitForTimeout(1000);
       
-      const cards = await page.locator('.card, [class*=\"rounded-xl\"]');
+      const cards = await page.locator('.card, [class*="rounded-xl"]');
       const cardCount = await cards.count();
       console.log('InvoiceView cards:', cardCount);
       
@@ -80,18 +80,18 @@ test.describe('UI Fullscreen Mode Tests', () => {
   test('ItemModal fullscreen issues - image preview', async ({ page }) => {
     await page.goto('http://localhost:5173/items');
     
-    const addBtn = await page.locator('button:has-text(\"Add Item\")');
+    const addBtn = await page.locator('button:has-text("Add Item")');
     if (await addBtn.isVisible()) {
       await addBtn.click();
       await page.waitForTimeout(500);
       
-      const dialog = await page.locator('[role=\"dialog\"]');
+      const dialog = await page.locator('[role="dialog"]');
       if (await dialog.isVisible()) {
         const dialogWidth = await dialog.evaluate(el => el.getBoundingClientRect().width);
         const dialogHeight = await dialog.evaluate(el => el.getBoundingClientRect().height);
         console.log('Dialog dimensions:', dialogWidth, 'x', dialogHeight);
         
-        const imageContainer = await page.locator('[class*=\"aspect-square\"]');
+        const imageContainer = await page.locator('[class*="aspect-square"]');
         if (await imageContainer.isVisible()) {
           const containerWidth = await imageContainer.evaluate(el => el.getBoundingClientRect().width);
           console.log('Image container width:', containerWidth);
@@ -101,7 +101,7 @@ test.describe('UI Fullscreen Mode Tests', () => {
   });
 
   test('Sidebar in fullscreen mode', async ({ page }) => {
-    const sidebar = await page.locator('div.fixed.left-0, div[class*=\"sidebar\"]');
+    const sidebar = await page.locator('div.fixed.left-0, div[class*="sidebar"]');
     const sidebarVisible = await sidebar.isVisible();
     console.log('Sidebar visible:', sidebarVisible);
     
@@ -126,7 +126,7 @@ test.describe('UI Fullscreen Mode Tests', () => {
   });
 
   test('Check for z-index issues in fullscreen', async ({ page }) => {
-    const elements = await page.locator('header, .sidebar, .fixed, [role=\"dialog\"]');
+    const elements = await page.locator('header, .sidebar, .fixed, [role="dialog"]');
     for (let i = 0; i < await elements.count(); i++) {
       const el = elements.nth(i);
       if (await el.isVisible()) {
@@ -140,7 +140,7 @@ test.describe('UI Fullscreen Mode Tests', () => {
   test('Reports page fullscreen check', async ({ page }) => {
     await page.goto('http://localhost:5173/reports');
     
-    const cards = await page.locator('.card, [class*=\"rounded-xl\"]');
+    const cards = await page.locator('.card, [class*="rounded-xl"]');
     const cardCount = await cards.count();
     console.log('Reports cards:', cardCount);
     

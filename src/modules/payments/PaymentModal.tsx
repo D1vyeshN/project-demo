@@ -57,9 +57,11 @@ export default function PaymentModal({
     }
 
     // Update party outstanding balance — reduce by payment amount
-    // Allow negative balance (credit: you owe the party)
+    // If party owes you (positive), payment reduces their debt.
+    // If you owe party (negative credit), payment reduces your debt to them.
     if (party) {
-      const newOutstanding = party.currentOutstanding - finalAmount;
+      const sign = party.currentOutstanding >= 0 ? 1 : -1;
+      const newOutstanding = party.currentOutstanding - sign * finalAmount;
       updateParty(party.id, { currentOutstanding: newOutstanding });
     }
 

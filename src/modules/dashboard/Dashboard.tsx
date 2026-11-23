@@ -401,7 +401,6 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between text-xs font-medium text-gray-500 border-b border-gray-200 pb-2 mb-1">
                   <span className="flex-1">Item</span>
                   <span className="w-14 text-center">Stock</span>
-                  <span className="w-14 text-right">Alert</span>
                 </div>
                 <div className="space-y-1">
                   {lowStockPreview.map((it) => (
@@ -414,9 +413,6 @@ export default function Dashboard() {
                       </span>
                       <span className="w-14 text-center text-sm text-gray-600">
                         {it.currentStock}
-                      </span>
-                      <span className="w-14 text-right text-xs font-medium text-red-600">
-                        &lt; 5
                       </span>
                     </div>
                   ))}

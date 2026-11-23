@@ -165,16 +165,16 @@ export const smartTempPurchases: Omit<Purchase, 'id' | 'createdAt'>[] = [
 
 // Smart payments - linked to real invoices and parties
 export const smartTempPayments: Omit<Payment, 'id' | 'createdAt'>[] = [
-  { refNo: 'RCP-001', partyId: 'party-abc-traders', invoiceId: 'inv-001', amount: 106672, paymentMode: 'Cash', paymentRef: 'CASH-001', date: daysAgo(5) },
-  { refNo: 'RCP-002', partyId: 'party-xyz-suppliers', invoiceId: undefined, amount: 10000, paymentMode: 'UPI', paymentRef: 'UPI-1001', date: daysAgo(4) },
-  { refNo: 'RCP-003', partyId: 'party-lmn-distributors', invoiceId: 'inv-004', amount: 30000, paymentMode: 'Bank', paymentRef: 'BANK-2001', date: daysAgo(2) },
-  { refNo: 'RCP-004', partyId: 'party-lmn-distributors', invoiceId: 'inv-004', amount: 69800, paymentMode: 'Cash', paymentRef: 'CASH-002', date: daysAgo(2) },
-  { refNo: 'RCP-005', partyId: 'party-uvw-enterprises', invoiceId: 'inv-006', amount: 5000, paymentMode: 'Cash', paymentRef: 'CASH-003', date: daysAgo(1) },
-  { refNo: 'RCP-006', partyId: 'party-wxyz-trading', invoiceId: 'inv-007', amount: 8400, paymentMode: 'UPI', paymentRef: 'UPI-1002', date: daysAgo(30) },
-  { refNo: 'RCP-007', partyId: 'party-def-wholesale', invoiceId: 'inv-009', amount: 25000, paymentMode: 'Bank', paymentRef: 'BANK-2002', date: daysAgo(60) },
-  { refNo: 'RCP-008', partyId: 'party-def-wholesale', invoiceId: 'inv-009', amount: 35000, paymentMode: 'Cash', paymentRef: 'CASH-004', date: daysAgo(55) },
-  { refNo: 'RCP-009', partyId: 'party-ghi-stores', invoiceId: 'inv-010', amount: 55000, paymentMode: 'Cash', paymentRef: 'CASH-005', date: daysAgo(90) },
-  { refNo: 'RCP-010', partyId: 'party-rst-corp', invoiceId: 'inv-012', amount: 12000, paymentMode: 'UPI', paymentRef: 'UPI-1003', date: daysAgo(150) },
+  { refNo: 'RCP-001', partyId: 'ABC Traders', invoiceId: 'INV-001', amount: 106672, paymentMode: 'Cash', paymentRef: 'CASH-001', date: daysAgo(5) },
+  { refNo: 'RCP-002', partyId: 'XYZ Suppliers', invoiceId: undefined, amount: 10000, paymentMode: 'UPI', paymentRef: 'UPI-1001', date: daysAgo(4) },
+  { refNo: 'RCP-003', partyId: 'LMN Distributors', invoiceId: 'INV-004', amount: 30000, paymentMode: 'Bank', paymentRef: 'BANK-2001', date: daysAgo(2) },
+  { refNo: 'RCP-004', partyId: 'LMN Distributors', invoiceId: 'INV-004', amount: 69800, paymentMode: 'Cash', paymentRef: 'CASH-002', date: daysAgo(2) },
+  { refNo: 'RCP-005', partyId: 'UVW Enterprises', invoiceId: 'INV-006', amount: 5000, paymentMode: 'Cash', paymentRef: 'CASH-003', date: daysAgo(1) },
+  { refNo: 'RCP-006', partyId: 'WXYZ Trading', invoiceId: 'INV-007', amount: 8400, paymentMode: 'UPI', paymentRef: 'UPI-1002', date: daysAgo(30) },
+  { refNo: 'RCP-007', partyId: 'DEF Wholesale', invoiceId: 'INV-009', amount: 25000, paymentMode: 'Bank', paymentRef: 'BANK-2002', date: daysAgo(60) },
+  { refNo: 'RCP-008', partyId: 'DEF Wholesale', invoiceId: 'INV-009', amount: 35000, paymentMode: 'Cash', paymentRef: 'CASH-004', date: daysAgo(55) },
+  { refNo: 'RCP-009', partyId: 'GHI Stores', invoiceId: 'INV-010', amount: 55000, paymentMode: 'Cash', paymentRef: 'CASH-005', date: daysAgo(90) },
+  { refNo: 'RCP-010', partyId: 'RST Corp', invoiceId: 'INV-012', amount: 12000, paymentMode: 'UPI', paymentRef: 'UPI-1003', date: daysAgo(150) },
 ];
 
 // Smart stock movements - chronological per item
@@ -182,53 +182,53 @@ export const smartTempStockMovements: Omit<StockMovement, 'id'>[] = [
   // Laptop (SKU-0001): Opening 60, Purchase +10, Sales -10 = 50
   { itemId: 'SKU-0001', type: 'Opening Stock', qty: 60, refId: undefined, date: daysAgo(25), balance: 60 },
   { itemId: 'SKU-0001', type: 'Purchase', qty: 10, refId: 'PUR-001', date: daysAgo(20), balance: 70 },
-  { itemId: 'SKU-0001', type: 'Sales', qty: -10, refId: 'inv-001', date: daysAgo(5), balance: 50 },
+  { itemId: 'SKU-0001', type: 'Sales', qty: -10, refId: 'INV-001', date: daysAgo(5), balance: 50 },
   // Mouse (SKU-0002): Opening 20, Purchase +50, Sales -5 = 3
   { itemId: 'SKU-0002', type: 'Opening Stock', qty: 20, refId: undefined, date: daysAgo(25), balance: 20 },
   { itemId: 'SKU-0002', type: 'Purchase', qty: 50, refId: 'PUR-002', date: daysAgo(18), balance: 70 },
-  { itemId: 'SKU-0002', type: 'Sales', qty: -5, refId: 'inv-001', date: daysAgo(5), balance: 3 },
+  { itemId: 'SKU-0002', type: 'Sales', qty: -5, refId: 'INV-001', date: daysAgo(5), balance: 3 },
   // Rice 5kg (SKU-0007): Opening 10, Purchase +100, Sales -20 = 0
   { itemId: 'SKU-0007', type: 'Opening Stock', qty: 10, refId: undefined, date: daysAgo(25), balance: 10 },
   { itemId: 'SKU-0007', type: 'Purchase', qty: 100, refId: 'PUR-003', date: daysAgo(15), balance: 110 },
-  { itemId: 'SKU-0007', type: 'Sales', qty: -20, refId: 'inv-007', date: daysAgo(30), balance: 0 },
+  { itemId: 'SKU-0007', type: 'Sales', qty: -20, refId: 'INV-007', date: daysAgo(30), balance: 0 },
   // Sofa (SKU-0008): Opening 2, Purchase +0, Sales -1 = 0
   { itemId: 'SKU-0008', type: 'Opening Stock', qty: 2, refId: undefined, date: daysAgo(25), balance: 2 },
-  { itemId: 'SKU-0008', type: 'Sales', qty: -1, refId: 'inv-008', date: daysAgo(45), balance: 0 },
+  { itemId: 'SKU-0008', type: 'Sales', qty: -1, refId: 'INV-008', date: daysAgo(45), balance: 0 },
   // Monitor (SKU-0009): Opening 3, Purchase +5, Sales -2 = 0
   { itemId: 'SKU-0009', type: 'Opening Stock', qty: 3, refId: undefined, date: daysAgo(25), balance: 3 },
   { itemId: 'SKU-0009', type: 'Purchase', qty: 5, refId: 'PUR-008', date: daysAgo(3), balance: 8 },
-  { itemId: 'SKU-0009', type: 'Sales', qty: -2, refId: 'inv-010', date: daysAgo(90), balance: 0 },
+  { itemId: 'SKU-0009', type: 'Sales', qty: -2, refId: 'INV-010', date: daysAgo(90), balance: 0 },
   // Paper (SKU-0010): Opening 4, Purchase +0, Sales -5 = 0
   { itemId: 'SKU-0010', type: 'Opening Stock', qty: 4, refId: undefined, date: daysAgo(25), balance: 4 },
-  { itemId: 'SKU-0010', type: 'Sales', qty: -5, refId: 'inv-010', date: daysAgo(90), balance: 0 },
+  { itemId: 'SKU-0010', type: 'Sales', qty: -5, refId: 'INV-010', date: daysAgo(90), balance: 0 },
   // Chair (SKU-0011): Opening 10, Purchase +20, Sales -5 = 8
   { itemId: 'SKU-0011', type: 'Opening Stock', qty: 10, refId: undefined, date: daysAgo(25), balance: 10 },
   { itemId: 'SKU-0011', type: 'Purchase', qty: 20, refId: 'PUR-004', date: daysAgo(12), balance: 30 },
-  { itemId: 'SKU-0011', type: 'Sales', qty: -5, refId: 'inv-006', date: daysAgo(1), balance: 8 },
+  { itemId: 'SKU-0011', type: 'Sales', qty: -5, refId: 'INV-006', date: daysAgo(1), balance: 8 },
   // Milk (SKU-0012): Opening 35, Purchase +200, Sales -30 = 30
   { itemId: 'SKU-0012', type: 'Opening Stock', qty: 35, refId: undefined, date: daysAgo(25), balance: 35 },
   { itemId: 'SKU-0012', type: 'Purchase', qty: 200, refId: 'PUR-007', date: daysAgo(5), balance: 235 },
-  { itemId: 'SKU-0012', type: 'Sales', qty: -30, refId: 'inv-006', date: daysAgo(1), balance: 30 },
+  { itemId: 'SKU-0012', type: 'Sales', qty: -30, refId: 'INV-006', date: daysAgo(1), balance: 30 },
   // Pen (SKU-0003): Opening 250, Purchase +300, Sales -50 = 200
   { itemId: 'SKU-0003', type: 'Opening Stock', qty: 250, refId: undefined, date: daysAgo(25), balance: 250 },
   { itemId: 'SKU-0003', type: 'Purchase', qty: 300, refId: 'PUR-005', date: daysAgo(10), balance: 550 },
-  { itemId: 'SKU-0003', type: 'Sales', qty: -50, refId: 'inv-001', date: daysAgo(5), balance: 200 },
+  { itemId: 'SKU-0003', type: 'Sales', qty: -50, refId: 'INV-001', date: daysAgo(5), balance: 200 },
   // Notebook (SKU-0004): Opening 5, Purchase +0, Sales -10 = 1
   { itemId: 'SKU-0004', type: 'Opening Stock', qty: 5, refId: undefined, date: daysAgo(25), balance: 5 },
-  { itemId: 'SKU-0004', type: 'Sales', qty: -10, refId: 'inv-010', date: daysAgo(90), balance: 1 },
+  { itemId: 'SKU-0004', type: 'Sales', qty: -10, refId: 'INV-010', date: daysAgo(90), balance: 1 },
   // Washing Machine (SKU-0006): Opening 8, Purchase +5, Sales -1 = 5
   { itemId: 'SKU-0006', type: 'Opening Stock', qty: 8, refId: undefined, date: daysAgo(25), balance: 8 },
   { itemId: 'SKU-0006', type: 'Purchase', qty: 5, refId: 'PUR-006', date: daysAgo(8), balance: 13 },
-  { itemId: 'SKU-0006', type: 'Sales', qty: -1, refId: 'inv-002', date: daysAgo(4), balance: 5 },
+  { itemId: 'SKU-0006', type: 'Sales', qty: -1, refId: 'INV-002', date: daysAgo(4), balance: 5 },
   // T-Shirt (SKU-0013): Opening 120, Purchase +0, Sales -20 = 100
   { itemId: 'SKU-0013', type: 'Opening Stock', qty: 120, refId: undefined, date: daysAgo(25), balance: 120 },
-  { itemId: 'SKU-0013', type: 'Sales', qty: -20, refId: 'inv-009', date: daysAgo(60), balance: 100 },
+  { itemId: 'SKU-0013', type: 'Sales', qty: -20, refId: 'INV-009', date: daysAgo(60), balance: 100 },
   // Wheat (SKU-0014): Opening 25, Purchase +0, Sales -50 = 4
   { itemId: 'SKU-0014', type: 'Opening Stock', qty: 25, refId: undefined, date: daysAgo(25), balance: 25 },
-  { itemId: 'SKU-0014', type: 'Sales', qty: -50, refId: 'inv-009', date: daysAgo(60), balance: 4 },
+  { itemId: 'SKU-0014', type: 'Sales', qty: -50, refId: 'INV-009', date: daysAgo(60), balance: 4 },
   // Cabinet (SKU-0015): Opening 10, Purchase +0, Sales -3 = 7
   { itemId: 'SKU-0015', type: 'Opening Stock', qty: 10, refId: undefined, date: daysAgo(25), balance: 10 },
-  { itemId: 'SKU-0015', type: 'Sales', qty: -3, refId: 'inv-004', date: daysAgo(2), balance: 7 },
+  { itemId: 'SKU-0015', type: 'Sales', qty: -3, refId: 'INV-004', date: daysAgo(2), balance: 7 },
 ];
 
 /**
@@ -253,4 +253,6 @@ export function generateSmartTempData(): {
     stockMovements: smartTempStockMovements,
   };
 }
+
+
 

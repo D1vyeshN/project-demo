@@ -25,6 +25,7 @@ import {
   smartTempItems,
   smartTempParties,
   smartTempInvoices,
+  smartTempPurchases,
 } from "@/lib/tempData";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -130,7 +131,7 @@ export default function SidebarComponent() {
   const { pathname } = location;
   const { items, setItems } = useItems();
   const { parties, setParties } = useParties();
-  const { setInvoices } = useInvoices();
+  const { setInvoices, setMovements } = useInvoices();
   const { setPurchases } = usePurchases();
   const { setPayments } = usePayments();
 
@@ -173,26 +174,39 @@ export default function SidebarComponent() {
       partyIdMap[smartTempParties[i].name] = party.id;
     });
 
-    // Step 3: Generate invoices with mapped party IDs
-    const tempInvoices = invoices.map((inv) => ({
-      ...inv,
-      id: generateId(),
-      partyId: partyIdMap[inv.partyName] || inv.partyId,
-      partyName: smartTempParties.find((p) => p.name === inv.partyName)?.name || inv.partyName,
-      createdAt: now,
-      updatedAt: now,
-    }));
+    // Step 3: Generate invoices with mapped party IDs and item IDs
+    const tempInvoices = invoices.map((inv) => {
+      const partyName = inv.partyName;
+      const partyId = partyIdMap[partyName] || inv.partyId;
+      return {
+        ...inv,
+        id: generateId(),
+        partyId,
+        partyName: smartTempParties.find((p) => p.name === inv.partyName)?.name || inv.partyName,
+        items: inv.items.map((it) => ({
+          ...it,
+          itemId: itemIdMap[it.itemId] || it.itemId,
+        })),
+        createdAt: now,
+        updatedAt: now,
+      };
+    });
     const invoiceIdMap: Record<string, string> = {};
     tempInvoices.forEach((inv, i) => {
       invoiceIdMap[smartTempInvoices[i].invoiceNo] = inv.id;
     });
 
-    // Step 4: Generate purchases with real IDs
+    // Step 4: Generate purchases with mapped item IDs
     const tempPurchases = purchases.map((p) => ({
       ...p,
       id: generateId(),
+      itemId: itemIdMap[p.itemId] || p.itemId,
       createdAt: now,
     }));
+    const purchaseIdMap: Record<string, string> = {};
+    tempPurchases.forEach((p, i) => {
+      purchaseIdMap[smartTempPurchases[i].refNo] = p.id;
+    });
 
     // Step 5: Generate payments with mapped invoice IDs
     const tempPayments = payments.map((pay) => ({
@@ -216,11 +230,12 @@ export default function SidebarComponent() {
       };
     });
 
-    // Step 6: Generate stock movements with mapped item IDs
+    // Step 6: Generate stock movements with mapped item IDs and ref IDs
     const tempStockMovements = stockMovements.map((m) => ({
       ...m,
       id: generateId(),
-      itemId: itemIdMap[m.itemId] || m.itemId,
+      itemId: m.itemId ? itemIdMap[m.itemId] : m.itemId,
+      refId: m.refId ? invoiceIdMap[m.refId] || purchaseIdMap[m.refId] : m.refId,
       date: m.date,
     }));
 
@@ -229,6 +244,7 @@ export default function SidebarComponent() {
     setInvoices(tempInvoices);
     setPurchases(tempPurchases);
     setPayments(tempPayments);
+    setMovements(tempStockMovements);
 
     toast.success(
       `Successfully loaded ${tempItems.length} items, ${tempParties.length} parties, ${tempInvoices.length} invoices, ${tempPurchases.length} purchases, ${tempPayments.length} payments, and ${tempStockMovements.length} stock movements as temporary data.`,
@@ -277,7 +293,7 @@ export default function SidebarComponent() {
   };
 
   return (
-    <div className="fixed left-0 top-0 z-50 h-screen w-64 border-r border-gray-200 bg-gray-50">
+    <div className="fixed left-0 top-0 z-50 h-screen w-64 border-r border-gray-200">
       {/* Sidebar Trigger (Mobile) */}
       <button
         className="md:hidden p-2 rounded-md hover:bg-gray-200 text-gray-600"
