@@ -63,7 +63,7 @@ export default function ItemSelector({
           {label}
         </Label>
       )}
-      <div className="relative flex-1" ref={itemSearchRef}>
+      <div className="relative flex-1">
         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
         <Input
           ref={itemSearchRef}
@@ -85,48 +85,46 @@ export default function ItemSelector({
                   No items found. Add items in Items & Stock first.
                 </li>
               ) : (
-                <ul>
-                  {filteredItems.map((i) => (
-                    <li key={i.id}>
-                      <button
-                        type="button"
-                        onClick={() => handleAdd(i)}
-                        className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-blue-50 disabled:cursor-not-allowed ${
-                          selectedItemId === i.id
-                            ? 'bg-blue-50 border-l-2 border-blue-500'
-                            : ''
-                        }`}
-                        disabled={disabled}
-                      >
-                        {i.imageUrl ? (
-                          <img
-                            src={i.imageUrl}
-                            alt={i.name}
-                            className="h-10 w-10 shrink-0 rounded object-cover"
-                          />
-                        ) : (
-                          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gray-100">
-                            <Package className="h-5 w-5 text-gray-400" />
-                          </span>
-                        )}
-                        <span className="min-w-0">
-                          <span className="block truncate font-medium text-gray-900">
-                            {i.name}
-                          </span>
-                          <span className="mt-0.5 block text-xs text-gray-500">
-                            SKU: {i.sku} · Stock: {i.currentStock} ·{' '}
-                            {formatINR(i.sellingPrice)} · GST: {i.gstRate}%
-                          </span>
+                filteredItems.map((i) => (
+                  <li key={i.id}>
+                    <button
+                      type="button"
+                      onClick={() => handleAdd(i)}
+                      className={`flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-blue-50 disabled:cursor-not-allowed ${
+                        selectedItemId === i.id
+                          ? 'bg-blue-50 border-l-2 border-blue-500'
+                          : ''
+                      }`}
+                      disabled={disabled}
+                    >
+                      {i.imageUrl ? (
+                        <img
+                          src={i.imageUrl}
+                          alt={i.name}
+                          className="h-10 w-10 shrink-0 rounded object-cover"
+                        />
+                      ) : (
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded bg-gray-100">
+                          <Package className="h-5 w-5 text-gray-400" />
                         </span>
-                        {selectedItemId === i.id && (
-                          <span className="ml-auto text-xs text-green-600">
-                            <Check className="h-4 w-4" /> Selected
-                          </span>
-                        )}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                      )}
+                      <span className="min-w-0">
+                        <span className="block truncate font-medium text-gray-900">
+                          {i.name}
+                        </span>
+                        <span className="mt-0.5 block text-xs text-gray-500">
+                          SKU: {i.sku} · Stock: {i.currentStock} ·{' '}
+                          {formatINR(i.sellingPrice)} · GST: {i.gstRate}%
+                        </span>
+                      </span>
+                      {selectedItemId === i.id && (
+                        <span className="ml-auto text-xs text-green-600">
+                          <Check className="h-4 w-4" /> Selected
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                ))
               )}
             </ul>
           </div>

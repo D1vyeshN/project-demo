@@ -29,8 +29,23 @@ export function getStorage<K extends keyof StorageMap>(
   try {
     const raw = window.localStorage.getItem(key);
     if (!raw) return defaultValue;
-    return JSON.parse(raw) as StorageMap[K];
-  } catch {
+    try {
+      return JSON.parse(raw) as StorageMap[K];
+    } catch (parseErr) {
+      console.error(
+        `[storage] Corrupt JSON for key "${key}", resetting to default.`,
+        parseErr
+      );
+      // Attempt recovery: remove corrupt key so app can continue
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // ignore removal failure
+      }
+      return defaultValue;
+    }
+  } catch (err) {
+    console.error(`[storage] Unexpected error reading key "${key}":`, err);
     return defaultValue;
   }
 }

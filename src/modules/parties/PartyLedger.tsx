@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useParties } from './useParties';
@@ -7,6 +7,7 @@ import { usePayments } from '@/modules/payments/usePayments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
 import { DataTable } from '@/shared/ui/data-table';
+import PaymentModal from '@/modules/payments/PaymentModal';
 
 const currency = new Intl.NumberFormat('en-IN', {
   style: 'currency',
@@ -33,21 +34,7 @@ export default function PartyLedger() {
 
   const party = parties.find((p) => p.id === id);
 
-  if (!party) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Party Not Found</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Link to="/parties" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
-            Back to Parties
-          </Link>
-        </CardContent>
-      </Card>
-    );
-  }
-
+  // All hooks must run before any conditional return — React rules
   // Party's invoices (Sale rows) — oldest first for running balance
   const partyInvoices = useMemo(
     () =>
@@ -68,6 +55,8 @@ export default function PartyLedger() {
 
   // Build the unified ledger chronologically
   const ledger: LedgerRow[] = useMemo(() => {
+    if (!party) return [];
+
     const rows: LedgerRow[] = [];
 
     // Opening Ledger
@@ -124,16 +113,35 @@ export default function PartyLedger() {
     }
 
     return rows;
-  }, [party.openingOutstanding, party.createdAt, partyInvoices, partyPayments]);
+  }, [party?.id, party?.openingOutstanding, party?.createdAt, partyInvoices, partyPayments]);
 
   const totalSales = partyInvoices.reduce((s, inv) => s + inv.total, 0);
-  const currentOutstanding = ledger.length > 0 ? ledger[ledger.length - 1].balance : party.openingOutstanding;
+  const currentOutstanding = ledger.length > 0 ? ledger[ledger.length - 1].balance : party?.openingOutstanding ?? 0;
 
   const typeColor: Record<string, string> = {
     'Opening Ledger': 'bg-blue-100 text-blue-700',
     Sale: 'bg-green-100 text-green-700',
     Payment: 'bg-amber-100 text-amber-700',
   };
+
+  // Payment modal state
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+
+  // Conditional render AFTER all hooks — party may not exist yet
+  if (!party) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Party Not Found</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Link to="/parties" className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700">
+            Back to Parties
+          </Link>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <div className="pb-10 space-y-6">
@@ -185,7 +193,10 @@ export default function PartyLedger() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { /* open record payment */ }}>
+          <Button
+            variant="outline"
+            onClick={() => setPaymentModalOpen(true)}
+          >
             <Plus className="mr-1.5 h-4 w-4" />
             Record Payment
           </Button>
@@ -254,6 +265,19 @@ export default function PartyLedger() {
           />
         </CardContent>
       </Card>
+
+      {/* Payment Modal */}
+      {id && (
+        <PaymentModal
+          open={paymentModalOpen}
+          onOpenChange={setPaymentModalOpen}
+          partyId={id}
+          balanceDue={Math.max(0, currentOutstanding)}
+          onSaved={() => {
+            setPaymentModalOpen(false);
+          }}
+        />
+      )}
     </div>
   );
 }

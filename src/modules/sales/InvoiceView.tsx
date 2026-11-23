@@ -1,5 +1,6 @@
 import { Link, useParams } from "react-router-dom";
-import { Edit2, Printer, Share2 } from "lucide-react";
+import { useState } from "react";
+import { Edit2, Printer, Share2, Plus } from "lucide-react";
 import { useInvoices } from './useInvoices';
 import { useParties } from '@/modules/parties/useParties';
 import { Badge } from '@/shared/ui/badge';
@@ -21,6 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import type { InvoiceStatus } from "@/lib/types";
+import PaymentModal from '@/modules/payments/PaymentModal';
 
 const currency = new Intl.NumberFormat("en-IN", {
   style: "currency",
@@ -49,6 +51,9 @@ export default function InvoiceView() {
   const { invoices } = useInvoices();
   const { parties } = useParties();
   const invoice = invoices.find((inv) => inv.id === id);
+
+  // Payment modal state — must run before any conditional return (React rules)
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
 
   if (!invoice) {
     return (
@@ -114,6 +119,15 @@ export default function InvoiceView() {
             <Share2 className="mr-1.5 h-4 w-4" />
             Share
           </Button>
+          {balanceDue > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => setPaymentModalOpen(true)}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              Record Payment
+            </Button>
+          )}
           <Button className="bg-blue-600 hover:bg-blue-700" asChild>
             <Link to={`/sales/invoices/${invoice.id}/edit`}>
               <Edit2 className="mr-1.5 h-4 w-4" />
@@ -196,51 +210,53 @@ export default function InvoiceView() {
               <CardTitle className="text-lg">Invoice Items</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-10">#</TableHead>
-                      <TableHead>Item</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead className="text-center">Qty</TableHead>
-                      <TableHead className="text-right">Rate (₹)</TableHead>
-                      <TableHead className="text-center">Discount %</TableHead>
-                      <TableHead className="text-center">GST %</TableHead>
-                      <TableHead className="text-right">Amount (₹)</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoice.items.map((item, idx) => (
-                      <TableRow key={`${item.itemId}-${idx}`}>
-                        <TableCell className="text-gray-500">
-                          {idx + 1}
-                        </TableCell>
-                        <TableCell className="font-medium text-gray-900">
-                          {item.name}
-                        </TableCell>
-                        <TableCell className="text-gray-600">
-                          {item.sku}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.qty}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {formatINR(item.rate)}
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.discountPercent ?? 0}%
-                        </TableCell>
-                        <TableCell className="text-center">
-                          {item.gstRate}%
-                        </TableCell>
-                        <TableCell className="text-right font-medium text-gray-900">
-                          {formatINR(item.amount)}
-                        </TableCell>
+              <div className="border border-gray-200">
+                <div className="overflow-y-auto max-h-96">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">#</TableHead>
+                        <TableHead>Item</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-center">Qty</TableHead>
+                        <TableHead className="text-right">Rate (₹)</TableHead>
+                        <TableHead className="text-center">Discount %</TableHead>
+                        <TableHead className="text-center">GST %</TableHead>
+                        <TableHead className="text-right">Amount (₹)</TableHead>
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {invoice.items.map((item, idx) => (
+                        <TableRow key={`${item.itemId}-${idx}`}>
+                          <TableCell className="text-gray-500">
+                            {idx + 1}
+                          </TableCell>
+                          <TableCell className="font-medium text-gray-900">
+                            {item.name}
+                          </TableCell>
+                          <TableCell className="text-gray-600">
+                            {item.sku}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.qty}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {formatINR(item.rate)}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.discountPercent ?? 0}%
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {item.gstRate}%
+                          </TableCell>
+                          <TableCell className="text-right font-medium text-gray-900">
+                            {formatINR(item.amount)}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -287,6 +303,18 @@ export default function InvoiceView() {
           </Card>
         </div>
       </div>
+
+      {/* Payment Modal */}
+      <PaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        partyId={invoice.partyId}
+        invoiceId={invoice.id}
+        balanceDue={balanceDue}
+        onSaved={() => {
+          setPaymentModalOpen(false);
+        }}
+      />
     </div>
   );
 }

@@ -26,6 +26,8 @@ export interface DataTableProps<T> {
   emptyMessage?: string;
   emptyColSpan?: number;
   showPagination?: boolean;
+  maxHeight?: string;
+  scrollable?: boolean;
 }
 
 export function DataTable<T>({
@@ -35,6 +37,8 @@ export function DataTable<T>({
   emptyMessage = 'No items found.',
   emptyColSpan,
   showPagination = true,
+  maxHeight = '400px',
+  scrollable = true,
 }: DataTableProps<T>) {
   const [page, setPage] = React.useState(1);
 
@@ -49,9 +53,15 @@ export function DataTable<T>({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex-1 flex flex-col overflow-auto">
-        <div className="overflow-auto">
-          <Table className="border border-gray-200 overflow-auto">
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <div
+          className={cn(
+            'overflow-y-auto',
+            scrollable && maxHeight && `max-h-[${maxHeight}]`,
+            !scrollable && 'h-full'
+          )}
+        >
+          <Table className="border border-gray-200">
             <TableHeader>
               <TableRow className="!bg-blue-200/10">
                 {columns.map((col) => (
@@ -76,7 +86,7 @@ export function DataTable<T>({
                 </TableRow>
               ) : (
                 pageItems.map((row, idx) => (
-                  <TableRow key={row as unknown as string}>
+                  <TableRow key={String((row as any).id ?? (row as any).refNo ?? idx)}>
                     {columns.map((col) => {
                       const cellValue = col.render
                         ? col.render(row as any, idx)

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { useItems } from '@/modules/inventory/useItems';
 import { usePurchases } from './usePurchases';
 import { useInvoices } from '@/modules/sales/useInvoices';
-import { generateId, nowISO } from '@/lib/storage';
+import { generateId, nowISO, STORAGE_KEYS, getStorage } from '@/lib/storage';
 import { nextPurchaseNo } from '@/lib/constants';
 import { Button } from '@/shared/ui/button';
 import { input as Input } from '@/shared/ui/input';
@@ -38,7 +38,8 @@ export default function PurchaseModal({ open, onOpenChange }: PurchaseModalProps
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
-    const newRefNo = nextPurchaseNo(purchases);
+    const storedPurchases = getStorage(STORAGE_KEYS.PURCHASES, []);
+    const newRefNo = nextPurchaseNo(storedPurchases);
 
     addPurchase({
       refNo: newRefNo,

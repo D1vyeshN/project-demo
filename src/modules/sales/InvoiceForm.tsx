@@ -321,10 +321,14 @@ export default function InvoiceForm() {
       );
       return;
     }
-    if (amountReceived < 0 || amountReceived > total) {
-      setError('Amount received cannot be negative or exceed the invoice total.');
+    if (amountReceived < 0) {
+      setError('Amount received cannot be negative.');
       return;
     }
+
+    // Cash rounding: round to nearest rupee when mode is Cash
+    const finalAmountReceived = paymentMode === 'Cash' ? Math.round(amountReceived) : amountReceived;
+    const roundOff = paymentMode === 'Cash' ? finalAmountReceived - amountReceived : 0;
 
     const dateISO = new Date(`${invoiceDate}T12:00:00`).toISOString();
     const dueDateISO = dueDate
@@ -363,7 +367,7 @@ export default function InvoiceForm() {
 
       const latestParty = getParty(party.id) ?? party;
       const oldContribution = invoice.total - invoice.amountReceived;
-      const newContribution = total - amountReceived;
+      const newContribution = total - finalAmountReceived;
       updateParty(party.id, {
         currentOutstanding:
           latestParty.currentOutstanding - oldContribution + newContribution,
@@ -381,7 +385,8 @@ export default function InvoiceForm() {
         gst,
         total,
         paymentMode,
-        amountReceived,
+        amountReceived: finalAmountReceived,
+        roundOff,
         status,
         paymentRef: paymentRef.trim() || undefined,
       };
@@ -401,7 +406,8 @@ export default function InvoiceForm() {
         gst,
         total,
         paymentMode,
-        amountReceived,
+        amountReceived: finalAmountReceived,
+        roundOff,
         status,
         paymentRef: paymentRef.trim() || undefined,
       });
@@ -729,176 +735,180 @@ export default function InvoiceForm() {
         )}
 
         <div className="mt-4">
-          <Table className="min-w-[1100px] [&_th]:normal-case [&_th]:tracking-normal">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-10">#</TableHead>
-                <TableHead>Item</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead className="text-right">Available Stock</TableHead>
-                <TableHead className="text-center">Qty</TableHead>
-                <TableHead className="text-right">Rate (₹)</TableHead>
-                <TableHead className="text-center">Discount %</TableHead>
-                <TableHead className="text-center">GST %</TableHead>
-                <TableHead className="text-right">Amount (₹)</TableHead>
-                <TableHead className="text-right">Remaining Stock</TableHead>
-                <TableHead className="text-center">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoiceLines.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={11}
-                    className="py-10 text-center text-muted-foreground"
-                  >
-                    No items added yet. Search above or click &quot;Add Item&quot; to add items to the invoice.
-                  </TableCell>
-                </TableRow>
-              ) : (
-                invoiceLines.map((line, idx) => {
-                  const item = items.find((i) => i.id === line.itemId);
-                  const usedToHere = invoiceLines
-                    .slice(0, idx + 1)
-                    .reduce(
-                      (sum, l) =>
-                        l.itemId === line.itemId ? sum + l.qty : sum,
-                      0
-                    );
-                  const remaining = item ? item.currentStock - usedToHere : 0;
-                  const isOver = stockErrors.some(
-                    (e) => e.item.id === line.itemId
-                  );
-                  const discountOptions = DISCOUNT_PERCENTS.includes(
-                    line.discountPercent
-                  )
-                    ? DISCOUNT_PERCENTS
-                    : [...DISCOUNT_PERCENTS, line.discountPercent].sort(
-                        (a, b) => a - b
-                      );
-
-                  return (
-                    <TableRow key={`${line.itemId}-${idx}`}>
-                      <TableCell className="px-3 py-2 text-gray-500">
-                        {idx + 1}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 font-medium text-gray-900">
-                        {line.name || item?.name || '—'}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-gray-600">
-                        {line.sku || item?.sku || '—'}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right font-medium text-amber-600">
-                        {item ? item.currentStock : '—'}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <Input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={line.qty}
-                          onChange={(e) =>
-                            updateLine(
-                              idx,
-                              'qty',
-                              Math.max(1, parseInt(e.target.value) || 1)
-                            )
-                          }
-                          className={cn(
-                            'mx-auto h-9 w-20 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
-                            isOver &&
-                              'border-red-400 focus-visible:ring-red-400'
-                          )}
-                        />
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right">
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          value={line.rate}
-                          onChange={(e) =>
-                            updateLine(
-                              idx,
-                              'rate',
-                              Math.max(0, parseFloat(e.target.value) || 0)
-                            )
-                          }
-                          className="ml-auto h-9 w-24 text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        />
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <Select
-                          value={String(line.discountPercent)}
-                          onValueChange={(value) =>
-                            updateLine(idx, 'discountPercent', Number(value))
-                          }
-                        >
-                          <SelectTrigger className="mx-auto h-9 w-24">
-                            <SelectValue>{line.discountPercent}%</SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {discountOptions.map((percent) => (
-                              <SelectItem
-                                key={percent}
-                                value={String(percent)}
-                              >
-                                {percent}%
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <Select
-                          value={String(line.gstRate)}
-                          onValueChange={(value) =>
-                            updateLine(
-                              idx,
-                              'gstRate',
-                              parseInt(value, 10) as GSTRate
-                            )
-                          }
-                        >
-                          <SelectTrigger className="mx-auto h-9 w-20">
-                            <SelectValue>{line.gstRate}%</SelectValue>
-                          </SelectTrigger>
-                          <SelectContent>
-                            {GST_RATES.map((rate) => (
-                              <SelectItem key={rate} value={String(rate)}>
-                                {rate}%
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-right font-medium text-gray-900">
-                        {formatINR(line.amount)}
-                      </TableCell>
+          <div className="border border-gray-200">
+            <div className="overflow-y-auto max-h-96">
+              <Table className="min-w-[1100px] [&_th]:normal-case [&_th]:tracking-normal">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10">#</TableHead>
+                    <TableHead>Item</TableHead>
+                    <TableHead>SKU</TableHead>
+                    <TableHead className="text-right">Available Stock</TableHead>
+                    <TableHead className="text-center">Qty</TableHead>
+                    <TableHead className="text-right">Rate (₹)</TableHead>
+                    <TableHead className="text-center">Discount %</TableHead>
+                    <TableHead className="text-center">GST %</TableHead>
+                    <TableHead className="text-right">Amount (₹)</TableHead>
+                    <TableHead className="text-right">Remaining Stock</TableHead>
+                    <TableHead className="text-center">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {invoiceLines.length === 0 ? (
+                    <TableRow>
                       <TableCell
-                        className={cn(
-                          'px-3 py-2 text-right font-semibold',
-                          remaining < 0 ? 'text-red-600' : 'text-green-600'
-                        )}
+                        colSpan={11}
+                        className="py-10 text-center text-muted-foreground"
                       >
-                        {item ? remaining : '—'}
-                      </TableCell>
-                      <TableCell className="px-3 py-2 text-center">
-                        <button
-                          type="button"
-                          onClick={() => removeLine(idx)}
-                          aria-label={`Remove ${line.name}`}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition hover:bg-red-50"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+                        No items added yet. Search above or click "Add Item" to add items to the invoice.
                       </TableCell>
                     </TableRow>
-                  );
-                })
-              )}
-            </TableBody>
-          </Table>
+                  ) : (
+                    invoiceLines.map((line, idx) => {
+                      const item = items.find((i) => i.id === line.itemId);
+                      const usedToHere = invoiceLines
+                        .slice(0, idx + 1)
+                        .reduce(
+                          (sum, l) =>
+                            l.itemId === line.itemId ? sum + l.qty : sum,
+                          0
+                        );
+                      const remaining = item ? item.currentStock - usedToHere : 0;
+                      const isOver = stockErrors.some(
+                        (e) => e.item.id === line.itemId
+                      );
+                      const discountOptions = DISCOUNT_PERCENTS.includes(
+                        line.discountPercent
+                      )
+                        ? DISCOUNT_PERCENTS
+                        : [...DISCOUNT_PERCENTS, line.discountPercent].sort(
+                            (a, b) => a - b
+                          );
+
+                      return (
+                        <TableRow key={`${line.itemId}-${idx}`}>
+                          <TableCell className="px-3 py-2 text-gray-500">
+                            {idx + 1}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 font-medium text-gray-900">
+                            {line.name || item?.name || '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-gray-600">
+                            {line.sku || item?.sku || '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right font-medium text-amber-600">
+                            {item ? item.currentStock : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
+                            <Input
+                              type="number"
+                              min={1}
+                              step={1}
+                              value={line.qty}
+                              onChange={(e) =>
+                                updateLine(
+                                  idx,
+                                  'qty',
+                                  Math.max(1, parseInt(e.target.value) || 1)
+                                )
+                              }
+                              className={cn(
+                                'mx-auto h-9 w-20 text-center [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none',
+                                isOver &&
+                                  'border-red-400 focus-visible:ring-red-400'
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right">
+                            <Input
+                              type="number"
+                              min={0}
+                              step="0.01"
+                              value={line.rate}
+                              onChange={(e) =>
+                                updateLine(
+                                  idx,
+                                  'rate',
+                                  Math.max(0, parseFloat(e.target.value) || 0)
+                                )
+                              }
+                              className="ml-auto h-9 w-24 text-right [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                            />
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
+                            <Select
+                              value={String(line.discountPercent)}
+                              onValueChange={(value) =>
+                                updateLine(idx, 'discountPercent', Number(value))
+                              }
+                            >
+                              <SelectTrigger className="mx-auto h-9 w-24">
+                                <SelectValue>{line.discountPercent}%</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {discountOptions.map((percent) => (
+                                  <SelectItem
+                                    key={percent}
+                                    value={String(percent)}
+                                  >
+                                    {percent}%
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
+                            <Select
+                              value={String(line.gstRate)}
+                              onValueChange={(value) =>
+                                updateLine(
+                                  idx,
+                                  'gstRate',
+                                  parseInt(value, 10) as GSTRate
+                                )
+                              }
+                            >
+                              <SelectTrigger className="mx-auto h-9 w-20">
+                                <SelectValue>{line.gstRate}%</SelectValue>
+                              </SelectTrigger>
+                              <SelectContent>
+                                {GST_RATES.map((rate) => (
+                                  <SelectItem key={rate} value={String(rate)}>
+                                    {rate}%
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-right font-medium text-gray-900">
+                            {formatINR(line.amount)}
+                          </TableCell>
+                          <TableCell
+                            className={cn(
+                              'px-3 py-2 text-right font-semibold',
+                              remaining < 0 ? 'text-red-600' : 'text-green-600'
+                            )}
+                          >
+                            {item ? remaining : '—'}
+                          </TableCell>
+                          <TableCell className="px-3 py-2 text-center">
+                            <button
+                              type="button"
+                              onClick={() => removeLine(idx)}
+                              aria-label={`Remove ${line.name}`}
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-500 transition hover:bg-red-50"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -965,6 +975,25 @@ export default function InvoiceForm() {
                 </Select>
               </div>
             </div>
+
+              {paymentMode === 'Cash' && amountReceived !== Math.round(amountReceived) && (
+                <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200">
+                  <div className="flex justify-between text-xs text-amber-800 mb-1">
+                    <span>Original amount:</span>
+                    <span>₹{amountReceived.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs font-medium text-amber-800">
+                    <span>Rounded (cash):</span>
+                    <span>₹{Math.round(amountReceived)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs mt-1">
+                    <span>Round-off:</span>
+                    <span className="text-green-600">
+                      +{(Math.round(amountReceived) - amountReceived).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+              )}
 
             <div>
               <Label htmlFor="paymentRef" className="mb-1.5 block">

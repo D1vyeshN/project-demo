@@ -5,319 +5,252 @@ import type {
   InvoiceItem,
   Purchase,
   Payment,
-  Return,
   StockMovement,
 } from './types';
-import {
-  GST_RATES,
-  UNITS,
-  CATEGORIES,
-  PAYMENT_MODES,
-  INVOICE_STATUSES,
-  STOCK_MOVEMENT_TYPES,
-  INVOICE_PREFIX,
-  PURCHASE_PREFIX,
-  PAYMENT_PREFIX,
-  RETURN_PREFIX,
-} from './constants';
 
-// Random generators
-function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1) + min);
-}
+const now = new Date();
+const daysAgo = (n: number) => {
+  const d = new Date(now);
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+};
 
-function randomFloat(min: number, max: number, decimals = 2): number {
-  return Number((Math.random() * (max - min) + min).toFixed(decimals));
-}
-
-function randomItem(): Omit<Item, 'id' | 'createdAt' | 'updatedAt'> {
-  const categories = CATEGORIES.filter((c) => c !== 'Other');
-  const category = categories[randomInt(0, categories.length - 1)];
-  const unit = UNITS[randomInt(0, UNITS.length - 1)];
-  const gstRate = GST_RATES[randomInt(0, GST_RATES.length - 1)];
-  const skuNum = randomInt(1, 9999).toString().padStart(4, '0');
-
-  let name: string;
-  let sellingPrice: number;
-  let currentStock: number;
-
-  switch (category) {
-    case 'Electronics':
-      name = `Electronics Item ${skuNum}`;
-      sellingPrice = randomFloat(1000, 50000);
-      currentStock = randomInt(0, 100);
-      break;
-    case 'Furniture':
-      name = `Furniture ${skuNum}`;
-      sellingPrice = randomFloat(2000, 15000);
-      currentStock = randomInt(1, 50);
-      break;
-    case 'Groceries':
-      name = `Grocery ${skuNum}`;
-      sellingPrice = randomFloat(50, 500);
-      currentStock = randomInt(10, 200);
-      break;
-    case 'Accessories':
-      name = `Accessory ${skuNum}`;
-      sellingPrice = randomFloat(200, 2000);
-      currentStock = randomInt(0, 150);
-      break;
-    case 'Stationery':
-      name = `Stationery ${skuNum}`;
-      sellingPrice = randomFloat(10, 500);
-      currentStock = randomInt(5, 100);
-      break;
-    default:
-      name = `Other Item ${skuNum}`;
-      sellingPrice = randomFloat(100, 1000);
-      currentStock = randomInt(0, 50);
-  }
-
-  const openingStock = currentStock + randomInt(0, 50);
-
-  return {
-    sku: `SKU-${skuNum}`,
-    name,
-    category,
-    sellingPrice,
-    gstRate,
-    unit,
-    openingStock,
-    currentStock,
-    description: `${name} - Random test item`,
-    imageUrl: '',
-  };
-}
-
-const firstNames = [
-  'Amit', 'Priya', 'Raj', 'Sneha', 'Kumar', 'Anjali', 'Vikram', 'Pooja',
-  'Deepak', 'Neha', 'Ramesh', 'Kavita', 'Suresh', 'Meet', 'Harsh', 'Ishita',
-  'Rahul', 'Shreya', 'Mohit', 'Riya', 'Vishal', 'Nandini', 'Arjun', 'Sia',
-  'Kunal', 'Tara', 'Manoj', 'Esha', 'Dinesh', 'Latika', 'Guruvayurappa', 'Meera',
+export const smartTempItems: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  // High stock items
+  { sku: 'SKU-0001', name: 'Laptop', category: 'Electronics', sellingPrice: 45000, gstRate: 18, unit: 'PCS', openingStock: 60, currentStock: 50, description: 'High performance laptop', imageUrl: '' },
+  { sku: 'SKU-0002', name: 'Mouse', category: 'Electronics', sellingPrice: 800, gstRate: 18, unit: 'PCS', openingStock: 20, currentStock: 3, description: 'Wireless mouse', imageUrl: '' },
+  { sku: 'SKU-0003', name: 'Pen', category: 'Stationery', sellingPrice: 10, gstRate: 12, unit: 'PCS', openingStock: 250, currentStock: 200, description: 'Ball point pen', imageUrl: '' },
+  { sku: 'SKU-0004', name: 'Notebook', category: 'Stationery', sellingPrice: 35, gstRate: 12, unit: 'PCS', openingStock: 5, currentStock: 1, description: 'Spiral notebook', imageUrl: '' },
+  // Low stock items (<= 5)
+  { sku: 'SKU-0005', name: 'Sugar', category: 'Groceries', sellingPrice: 45, gstRate: 5, unit: 'KG', openingStock: 15, currentStock: 2, description: 'Refined sugar', imageUrl: '' },
+  { sku: 'SKU-0006', name: 'Washing Machine', category: 'Electronics', sellingPrice: 25000, gstRate: 28, unit: 'PCS', openingStock: 8, currentStock: 5, description: 'Fully automatic washing machine', imageUrl: '' },
+  // Out of stock items (0)
+  { sku: 'SKU-0007', name: 'Rice 5kg', category: 'Groceries', sellingPrice: 400, gstRate: 5, unit: 'KG', openingStock: 10, currentStock: 0, description: 'Basmati rice', imageUrl: '' },
+  { sku: 'SKU-0008', name: 'Sofa', category: 'Furniture', sellingPrice: 45000, gstRate: 28, unit: 'PCS', openingStock: 2, currentStock: 0, description: '3-seater sofa', imageUrl: '' },
+  { sku: 'SKU-0009', name: 'Monitor', category: 'Electronics', sellingPrice: 12000, gstRate: 18, unit: 'PCS', openingStock: 3, currentStock: 0, description: '24 inch LED monitor', imageUrl: '' },
+  { sku: 'SKU-0010', name: 'Paper', category: 'Stationery', sellingPrice: 300, gstRate: 12, unit: 'BOX', openingStock: 4, currentStock: 0, description: 'A4 paper ream', imageUrl: '' },
+  // Mid stock items
+  { sku: 'SKU-0011', name: 'Chair', category: 'Furniture', sellingPrice: 3500, gstRate: 12, unit: 'PCS', openingStock: 10, currentStock: 8, description: 'Office chair', imageUrl: '' },
+  { sku: 'SKU-0012', name: 'Milk', category: 'Groceries', sellingPrice: 55, gstRate: 0, unit: 'BOX', openingStock: 35, currentStock: 30, description: 'Toned milk', imageUrl: '' },
+  { sku: 'SKU-0013', name: 'T-Shirt', category: 'Electronics', sellingPrice: 800, gstRate: 5, unit: 'PCS', openingStock: 120, currentStock: 100, description: 'Cotton t-shirt', imageUrl: '' },
+  { sku: 'SKU-0014', name: 'Wheat', category: 'Groceries', sellingPrice: 25, gstRate: 0, unit: 'KG', openingStock: 25, currentStock: 4, description: 'Wheat grain', imageUrl: '' },
+  { sku: 'SKU-0015', name: 'Cabinet', category: 'Furniture', sellingPrice: 15000, gstRate: 12, unit: 'PCS', openingStock: 10, currentStock: 7, description: 'Steel cabinet', imageUrl: '' },
 ];
 
-const lastNames = [
-  'Sharma', 'Patel', 'Kumar', 'Singh', 'Desai', 'Mehta', 'Joshi', 'Reddy',
-  'Iyer', 'Chauhan', 'Verma', 'Shroff', 'Gupta', 'Chatterjee', 'Banerjee',
-  'Saxena', 'Trivedi', 'Patwardhan', 'Deshmukh', 'Kulkarni',
+export const smartTempParties: Omit<Party, 'id' | 'createdAt' | 'updatedAt'>[] = [
+  // Active - owes money (positive outstanding)
+  { name: 'ABC Traders', phone: '9876543210', gstin: '22AAAAA0000A1Z5', address: '123 Market Street, Mumbai', openingOutstanding: 15000, currentOutstanding: 15000 },
+  { name: 'LMN Distributors', phone: '9011223344', gstin: '22CCCCC0000C3Z7', address: '456 Industrial Area, Delhi', openingOutstanding: 25000, currentOutstanding: 25000 },
+  { name: 'DEF Wholesale', phone: '9001122334', gstin: undefined, address: '789 Trade Center, Bangalore', openingOutstanding: 45000, currentOutstanding: 45000 },
+  { name: 'UVW Enterprises', phone: '9556677788', gstin: '22DDDDD0000D4Z8', address: '321 Business Park, Pune', openingOutstanding: 12000, currentOutstanding: 12000 },
+  { name: 'WXYZ Trading', phone: '9889990011', gstin: '22EEEEE0000E5Z9', address: '654 Market Road, Chennai', openingOutstanding: 3500, currentOutstanding: 3500 },
+  { name: 'RST Corp', phone: '9344556677', gstin: undefined, address: '987 Commercial Street, Kolkata', openingOutstanding: 800, currentOutstanding: 800 },
+  // Settled - zero balance
+  { name: 'PQR Retail', phone: '9988776655', gstin: undefined, address: '147 Shopping Complex, Hyderabad', openingOutstanding: 0, currentOutstanding: 0 },
+  { name: 'STU Agencies', phone: '9778889900', gstin: undefined, address: '258 Residency Road, Chennai', openingOutstanding: 0, currentOutstanding: 0 },
+  // Credit - negative balance (you owe them)
+  { name: 'XYZ Suppliers', phone: '9123456789', gstin: '22BBBBB0000B2Z6', address: '741 Supplier Lane, Mumbai', openingOutstanding: -5000, currentOutstanding: -5000 },
+  { name: 'GHI Stores', phone: '9223344556', gstin: '22FFFFF0000F6Z0', address: '369 Merchant Street, Delhi', openingOutstanding: -2000, currentOutstanding: -2000 },
 ];
 
-function randomParty(): Omit<Party, 'id' | 'createdAt' | 'updatedAt'> {
-  const firstName = firstNames[randomInt(0, firstNames.length - 1)];
-  const lastName = lastNames[randomInt(0, lastNames.length - 1)];
-  const name = `${firstName} ${lastName}`;
-  const phone = `9${randomInt(800000000, 999999999)}`;
+// Invoice item line data (referenced by smartTempInvoices)
+// Each item references an item from smartTempItems by sku
+export const smartTempInvoiceItems: Omit<InvoiceItem, 'id'>[] = [
+  { itemId: 'SKU-0001', sku: 'SKU-0001', name: 'Laptop', qty: 2, rate: 45000, discountPercent: 0, discount: 0, gstRate: 18, amount: 90000 },
+  { itemId: 'SKU-0002', sku: 'SKU-0002', name: 'Mouse', qty: 5, rate: 800, discountPercent: 10, discount: 400, gstRate: 18, amount: 3600 },
+  { itemId: 'SKU-0003', sku: 'SKU-0003', name: 'Pen', qty: 50, rate: 10, discountPercent: 0, discount: 0, gstRate: 12, amount: 500 },
+  { itemId: 'SKU-0004', sku: 'SKU-0004', name: 'Notebook', qty: 10, rate: 35, discountPercent: 0, discount: 0, gstRate: 12, amount: 350 },
+  { itemId: 'SKU-0005', sku: 'SKU-0005', name: 'Sugar', qty: 10, rate: 45, discountPercent: 0, discount: 0, gstRate: 5, amount: 450 },
+  { itemId: 'SKU-0006', sku: 'SKU-0006', name: 'Washing Machine', qty: 1, rate: 25000, discountPercent: 5, discount: 1250, gstRate: 28, amount: 23750 },
+  { itemId: 'SKU-0007', sku: 'SKU-0007', name: 'Rice 5kg', qty: 20, rate: 400, discountPercent: 0, discount: 0, gstRate: 5, amount: 8000 },
+  { itemId: 'SKU-0008', sku: 'SKU-0008', name: 'Sofa', qty: 1, rate: 45000, discountPercent: 0, discount: 0, gstRate: 28, amount: 45000 },
+  { itemId: 'SKU-0009', sku: 'SKU-0009', name: 'Monitor', qty: 2, rate: 12000, discountPercent: 0, discount: 0, gstRate: 18, amount: 24000 },
+  { itemId: 'SKU-0010', sku: 'SKU-0010', name: 'Paper', qty: 5, rate: 300, discountPercent: 0, discount: 0, gstRate: 12, amount: 1500 },
+  { itemId: 'SKU-0011', sku: 'SKU-0011', name: 'Chair', qty: 5, rate: 3500, discountPercent: 0, discount: 0, gstRate: 12, amount: 17500 },
+  { itemId: 'SKU-0012', sku: 'SKU-0012', name: 'Milk', qty: 30, rate: 55, discountPercent: 0, discount: 0, gstRate: 0, amount: 1650 },
+  { itemId: 'SKU-0013', sku: 'SKU-0013', name: 'T-Shirt', qty: 20, rate: 800, discountPercent: 20, discount: 3200, gstRate: 5, amount: 12800 },
+  { itemId: 'SKU-0014', sku: 'SKU-0014', name: 'Wheat', qty: 50, rate: 25, discountPercent: 0, discount: 0, gstRate: 0, amount: 1250 },
+  { itemId: 'SKU-0015', sku: 'SKU-0015', name: 'Cabinet', qty: 3, rate: 15000, discountPercent: 0, discount: 0, gstRate: 12, amount: 45000 },
+];
 
-  const hasGstin = Math.random() > 0.4;
-  const gstin = hasGstin
-    ? `${randomInt(20, 29)}${Array(5).fill(0).map(() => randomInt(0, 9)).join('')}${firstName.substring(0, 3).toUpperCase()}${randomInt(0, 99999)}${randomInt(0, 9)}`
-    : undefined;
+export const smartTempInvoices: Omit<Invoice, 'id' | 'createdAt'>[] = [
+  // Paid invoices
+  {
+    invoiceNo: 'INV-001', date: daysAgo(5), partyId: 'party-abc-traders', partyName: 'ABC Traders',
+    items: [smartTempInvoiceItems[0], smartTempInvoiceItems[1]],
+    subtotal: 90800, discount: 400, taxableAmount: 90400, gst: 16272, total: 106672,
+    paymentMode: 'Cash', amountReceived: 106672, status: 'Paid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-004', date: daysAgo(2), partyId: 'party-lmn-distributors', partyName: 'LMN Distributors',
+    items: [smartTempInvoiceItems[5], smartTempInvoiceItems[10], smartTempInvoiceItems[14]],
+    subtotal: 86250, discount: 1250, taxableAmount: 85000, gst: 14800, total: 99800,
+    paymentMode: 'Bank', amountReceived: 99800, status: 'Paid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-007', date: daysAgo(30), partyId: 'party-wxyz-trading', partyName: 'WXYZ Trading',
+    items: [smartTempInvoiceItems[6]],
+    subtotal: 8000, discount: 0, taxableAmount: 8000, gst: 400, total: 8400,
+    paymentMode: 'UPI', amountReceived: 8400, status: 'Paid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-010', date: daysAgo(90), partyId: 'party-ghi-stores', partyName: 'GHI Stores',
+    items: [smartTempInvoiceItems[7], smartTempInvoiceItems[8]],
+    subtotal: 69000, discount: 0, taxableAmount: 69000, gst: 8880, total: 77880,
+    paymentMode: 'Cash', amountReceived: 77880, status: 'Paid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-012', date: daysAgo(150), partyId: 'party-rst-corp', partyName: 'RST Corp',
+    items: [smartTempInvoiceItems[9]],
+    subtotal: 1500, discount: 0, taxableAmount: 1500, gst: 180, total: 1680,
+    paymentMode: 'UPI', amountReceived: 1680, status: 'Paid', paymentRef: undefined,
+  },
+  // Partially Paid invoices
+  {
+    invoiceNo: 'INV-002', date: daysAgo(4), partyId: 'party-xyz-suppliers', partyName: 'XYZ Suppliers',
+    items: [smartTempInvoiceItems[2]],
+    subtotal: 500, discount: 0, taxableAmount: 500, gst: 60, total: 560,
+    paymentMode: 'UPI', amountReceived: 200, status: 'Partially Paid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-006', date: daysAgo(1), partyId: 'party-uvw-enterprises', partyName: 'UVW Enterprises',
+    items: [smartTempInvoiceItems[11]],
+    subtotal: 1650, discount: 0, taxableAmount: 1650, gst: 0, total: 1650,
+    paymentMode: 'Cash', amountReceived: 500, status: 'Partially Paid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-009', date: daysAgo(60), partyId: 'party-def-wholesale', partyName: 'DEF Wholesale',
+    items: [smartTempInvoiceItems[13], smartTempInvoiceItems[12]],
+    subtotal: 14050, discount: 3200, taxableAmount: 10850, gst: 542, total: 11392,
+    paymentMode: 'Bank', amountReceived: 6000, status: 'Partially Paid', paymentRef: undefined,
+  },
+  // Unpaid invoices
+  {
+    invoiceNo: 'INV-003', date: daysAgo(3), partyId: 'party-pqr-retail', partyName: 'PQR Retail',
+    items: [smartTempInvoiceItems[3]],
+    subtotal: 350, discount: 0, taxableAmount: 350, gst: 42, total: 392,
+    paymentMode: 'Cash', amountReceived: 0, status: 'Unpaid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-005', date: daysAgo(1), partyId: 'party-rst-corp', partyName: 'RST Corp',
+    items: [smartTempInvoiceItems[4]],
+    subtotal: 450, discount: 0, taxableAmount: 450, gst: 22.5, total: 472.5,
+    paymentMode: 'Cash', amountReceived: 0, status: 'Unpaid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-008', date: daysAgo(45), partyId: 'party-stu-agencies', partyName: 'STU Agencies',
+    items: [smartTempInvoiceItems[10]],
+    subtotal: 17500, discount: 0, taxableAmount: 17500, gst: 2100, total: 19600,
+    paymentMode: 'Cash', amountReceived: 0, status: 'Unpaid', paymentRef: undefined,
+  },
+  {
+    invoiceNo: 'INV-011', date: daysAgo(100), partyId: 'party-abc-traders', partyName: 'ABC Traders',
+    items: [smartTempInvoiceItems[1]],
+    subtotal: 3600, discount: 400, taxableAmount: 3200, gst: 576, total: 3776,
+    paymentMode: 'Cash', amountReceived: 0, status: 'Unpaid', paymentRef: undefined,
+  },
+];
 
-  const openingOutstanding = Math.abs(randomFloat(-50000, 50000));
+// Smart purchases - reference real items from smartTempItems
+export const smartTempPurchases: Omit<Purchase, 'id' | 'createdAt'>[] = [
+  { refNo: 'PUR-001', itemId: 'SKU-0001', itemName: 'Laptop', qty: 10, rate: 40000, note: 'Monthly stock replenishment', date: daysAgo(20) },
+  { refNo: 'PUR-002', itemId: 'SKU-0002', itemName: 'Mouse', qty: 50, rate: 700, note: 'Monthly stock replenishment', date: daysAgo(18) },
+  { refNo: 'PUR-003', itemId: 'SKU-0007', itemName: 'Rice 5kg', qty: 100, rate: 380, note: 'Monthly stock replenishment', date: daysAgo(15) },
+  { refNo: 'PUR-004', itemId: 'SKU-0011', itemName: 'Chair', qty: 20, rate: 3000, note: 'Office furniture restock', date: daysAgo(12) },
+  { refNo: 'PUR-005', itemId: 'SKU-0003', itemName: 'Pen', qty: 300, rate: 8, note: 'Bulk office supplies', date: daysAgo(10) },
+  { refNo: 'PUR-006', itemId: 'SKU-0006', itemName: 'Washing Machine', qty: 5, rate: 22000, note: 'Festival season stock', date: daysAgo(8) },
+  { refNo: 'PUR-007', itemId: 'SKU-0012', itemName: 'Milk', qty: 200, rate: 50, note: 'Daily dairy supply', date: daysAgo(5) },
+  { refNo: 'PUR-008', itemId: 'SKU-0009', itemName: 'Monitor', qty: 5, rate: 11000, note: 'IT equipment restock', date: daysAgo(3) },
+];
 
+// Smart payments - linked to real invoices and parties
+export const smartTempPayments: Omit<Payment, 'id' | 'createdAt'>[] = [
+  { refNo: 'RCP-001', partyId: 'party-abc-traders', invoiceId: 'inv-001', amount: 106672, paymentMode: 'Cash', paymentRef: 'CASH-001', date: daysAgo(5) },
+  { refNo: 'RCP-002', partyId: 'party-xyz-suppliers', invoiceId: undefined, amount: 10000, paymentMode: 'UPI', paymentRef: 'UPI-1001', date: daysAgo(4) },
+  { refNo: 'RCP-003', partyId: 'party-lmn-distributors', invoiceId: 'inv-004', amount: 30000, paymentMode: 'Bank', paymentRef: 'BANK-2001', date: daysAgo(2) },
+  { refNo: 'RCP-004', partyId: 'party-lmn-distributors', invoiceId: 'inv-004', amount: 69800, paymentMode: 'Cash', paymentRef: 'CASH-002', date: daysAgo(2) },
+  { refNo: 'RCP-005', partyId: 'party-uvw-enterprises', invoiceId: 'inv-006', amount: 5000, paymentMode: 'Cash', paymentRef: 'CASH-003', date: daysAgo(1) },
+  { refNo: 'RCP-006', partyId: 'party-wxyz-trading', invoiceId: 'inv-007', amount: 8400, paymentMode: 'UPI', paymentRef: 'UPI-1002', date: daysAgo(30) },
+  { refNo: 'RCP-007', partyId: 'party-def-wholesale', invoiceId: 'inv-009', amount: 25000, paymentMode: 'Bank', paymentRef: 'BANK-2002', date: daysAgo(60) },
+  { refNo: 'RCP-008', partyId: 'party-def-wholesale', invoiceId: 'inv-009', amount: 35000, paymentMode: 'Cash', paymentRef: 'CASH-004', date: daysAgo(55) },
+  { refNo: 'RCP-009', partyId: 'party-ghi-stores', invoiceId: 'inv-010', amount: 55000, paymentMode: 'Cash', paymentRef: 'CASH-005', date: daysAgo(90) },
+  { refNo: 'RCP-010', partyId: 'party-rst-corp', invoiceId: 'inv-012', amount: 12000, paymentMode: 'UPI', paymentRef: 'UPI-1003', date: daysAgo(150) },
+];
+
+// Smart stock movements - chronological per item
+export const smartTempStockMovements: Omit<StockMovement, 'id'>[] = [
+  // Laptop (SKU-0001): Opening 60, Purchase +10, Sales -10 = 50
+  { itemId: 'SKU-0001', type: 'Opening Stock', qty: 60, refId: undefined, date: daysAgo(25), balance: 60 },
+  { itemId: 'SKU-0001', type: 'Purchase', qty: 10, refId: 'PUR-001', date: daysAgo(20), balance: 70 },
+  { itemId: 'SKU-0001', type: 'Sales', qty: -10, refId: 'inv-001', date: daysAgo(5), balance: 50 },
+  // Mouse (SKU-0002): Opening 20, Purchase +50, Sales -5 = 3
+  { itemId: 'SKU-0002', type: 'Opening Stock', qty: 20, refId: undefined, date: daysAgo(25), balance: 20 },
+  { itemId: 'SKU-0002', type: 'Purchase', qty: 50, refId: 'PUR-002', date: daysAgo(18), balance: 70 },
+  { itemId: 'SKU-0002', type: 'Sales', qty: -5, refId: 'inv-001', date: daysAgo(5), balance: 3 },
+  // Rice 5kg (SKU-0007): Opening 10, Purchase +100, Sales -20 = 0
+  { itemId: 'SKU-0007', type: 'Opening Stock', qty: 10, refId: undefined, date: daysAgo(25), balance: 10 },
+  { itemId: 'SKU-0007', type: 'Purchase', qty: 100, refId: 'PUR-003', date: daysAgo(15), balance: 110 },
+  { itemId: 'SKU-0007', type: 'Sales', qty: -20, refId: 'inv-007', date: daysAgo(30), balance: 0 },
+  // Sofa (SKU-0008): Opening 2, Purchase +0, Sales -1 = 0
+  { itemId: 'SKU-0008', type: 'Opening Stock', qty: 2, refId: undefined, date: daysAgo(25), balance: 2 },
+  { itemId: 'SKU-0008', type: 'Sales', qty: -1, refId: 'inv-008', date: daysAgo(45), balance: 0 },
+  // Monitor (SKU-0009): Opening 3, Purchase +5, Sales -2 = 0
+  { itemId: 'SKU-0009', type: 'Opening Stock', qty: 3, refId: undefined, date: daysAgo(25), balance: 3 },
+  { itemId: 'SKU-0009', type: 'Purchase', qty: 5, refId: 'PUR-008', date: daysAgo(3), balance: 8 },
+  { itemId: 'SKU-0009', type: 'Sales', qty: -2, refId: 'inv-010', date: daysAgo(90), balance: 0 },
+  // Paper (SKU-0010): Opening 4, Purchase +0, Sales -5 = 0
+  { itemId: 'SKU-0010', type: 'Opening Stock', qty: 4, refId: undefined, date: daysAgo(25), balance: 4 },
+  { itemId: 'SKU-0010', type: 'Sales', qty: -5, refId: 'inv-010', date: daysAgo(90), balance: 0 },
+  // Chair (SKU-0011): Opening 10, Purchase +20, Sales -5 = 8
+  { itemId: 'SKU-0011', type: 'Opening Stock', qty: 10, refId: undefined, date: daysAgo(25), balance: 10 },
+  { itemId: 'SKU-0011', type: 'Purchase', qty: 20, refId: 'PUR-004', date: daysAgo(12), balance: 30 },
+  { itemId: 'SKU-0011', type: 'Sales', qty: -5, refId: 'inv-006', date: daysAgo(1), balance: 8 },
+  // Milk (SKU-0012): Opening 35, Purchase +200, Sales -30 = 30
+  { itemId: 'SKU-0012', type: 'Opening Stock', qty: 35, refId: undefined, date: daysAgo(25), balance: 35 },
+  { itemId: 'SKU-0012', type: 'Purchase', qty: 200, refId: 'PUR-007', date: daysAgo(5), balance: 235 },
+  { itemId: 'SKU-0012', type: 'Sales', qty: -30, refId: 'inv-006', date: daysAgo(1), balance: 30 },
+  // Pen (SKU-0003): Opening 250, Purchase +300, Sales -50 = 200
+  { itemId: 'SKU-0003', type: 'Opening Stock', qty: 250, refId: undefined, date: daysAgo(25), balance: 250 },
+  { itemId: 'SKU-0003', type: 'Purchase', qty: 300, refId: 'PUR-005', date: daysAgo(10), balance: 550 },
+  { itemId: 'SKU-0003', type: 'Sales', qty: -50, refId: 'inv-001', date: daysAgo(5), balance: 200 },
+  // Notebook (SKU-0004): Opening 5, Purchase +0, Sales -10 = 1
+  { itemId: 'SKU-0004', type: 'Opening Stock', qty: 5, refId: undefined, date: daysAgo(25), balance: 5 },
+  { itemId: 'SKU-0004', type: 'Sales', qty: -10, refId: 'inv-010', date: daysAgo(90), balance: 1 },
+  // Washing Machine (SKU-0006): Opening 8, Purchase +5, Sales -1 = 5
+  { itemId: 'SKU-0006', type: 'Opening Stock', qty: 8, refId: undefined, date: daysAgo(25), balance: 8 },
+  { itemId: 'SKU-0006', type: 'Purchase', qty: 5, refId: 'PUR-006', date: daysAgo(8), balance: 13 },
+  { itemId: 'SKU-0006', type: 'Sales', qty: -1, refId: 'inv-002', date: daysAgo(4), balance: 5 },
+  // T-Shirt (SKU-0013): Opening 120, Purchase +0, Sales -20 = 100
+  { itemId: 'SKU-0013', type: 'Opening Stock', qty: 120, refId: undefined, date: daysAgo(25), balance: 120 },
+  { itemId: 'SKU-0013', type: 'Sales', qty: -20, refId: 'inv-009', date: daysAgo(60), balance: 100 },
+  // Wheat (SKU-0014): Opening 25, Purchase +0, Sales -50 = 4
+  { itemId: 'SKU-0014', type: 'Opening Stock', qty: 25, refId: undefined, date: daysAgo(25), balance: 25 },
+  { itemId: 'SKU-0014', type: 'Sales', qty: -50, refId: 'inv-009', date: daysAgo(60), balance: 4 },
+  // Cabinet (SKU-0015): Opening 10, Purchase +0, Sales -3 = 7
+  { itemId: 'SKU-0015', type: 'Opening Stock', qty: 10, refId: undefined, date: daysAgo(25), balance: 10 },
+  { itemId: 'SKU-0015', type: 'Sales', qty: -3, refId: 'inv-004', date: daysAgo(2), balance: 7 },
+];
+
+/**
+ * Generate complete smart temp dataset with all entities properly interconnected.
+ * Returns items, parties, invoices, purchases, payments, and stock movements
+ * with consistent IDs and cross-references.
+ */
+export function generateSmartTempData(): {
+  items: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>[];
+  parties: Omit<Party, 'id' | 'createdAt' | 'updatedAt'>[];
+  invoices: Omit<Invoice, 'id' | 'createdAt'>[];
+  purchases: Omit<Purchase, 'id' | 'createdAt'>[];
+  payments: Omit<Payment, 'id' | 'createdAt'>[];
+  stockMovements: Omit<StockMovement, 'id'>[];
+} {
   return {
-    name,
-    phone,
-    gstin,
-    address: `${randomInt(1, 100)}, ${Array(4).fill(0).map(() => String.fromCharCode(randomInt(65, 90))).join('')} Road, City`,
-    openingOutstanding,
-    currentOutstanding: openingOutstanding,
+    items: smartTempItems,
+    parties: smartTempParties,
+    invoices: smartTempInvoices,
+    purchases: smartTempPurchases,
+    payments: smartTempPayments,
+    stockMovements: smartTempStockMovements,
   };
 }
 
-/**
- * Generate invoice item
- */
-function randomInvoiceItem(): InvoiceItem {
-  const skuNum = randomInt(1, 9999).toString().padStart(4, '0');
-  const qty = randomInt(1, 10);
-  const rate = randomFloat(100, 5000);
-  const discountPercent = randomInt(0, 50);
-  const gstRate = GST_RATES[randomInt(0, GST_RATES.length - 1)];
-  const amount = Number((rate * qty * (1 - discountPercent / 100) * (1 + gstRate / 100)).toFixed(2));
-
-  return {
-    itemId: `item-${randomInt(1, 999)}`,
-    sku: `SKU-${skuNum}`,
-    name: `Item ${skuNum}`,
-    qty,
-    rate,
-    discountPercent,
-    discount: Number((rate * qty * discountPercent / 100).toFixed(2)),
-    gstRate,
-    amount,
-  };
-}
-
-/**
- * Generate a random invoice
- */
-function randomInvoice(items: InvoiceItem[], parties: Party[]): Invoice {
-  const invoiceNo = `${INVOICE_PREFIX}-${randomInt(100, 999)}`;
-  const party = parties[randomInt(0, parties.length - 1)];
-  const date = new Date().toISOString().split('T')[0];
-
-  const subtotal = Number(items.reduce((sum, item) => sum + item.amount, 0).toFixed(2));
-  const discount = Number((subtotal * randomInt(0, 20) / 100).toFixed(2));
-  const taxableAmount = Number((subtotal - discount).toFixed(2));
-  const gstRate = party.gstin !== undefined ? 18 : 12;
-  const gst = Number((taxableAmount * gstRate / 100).toFixed(2));
-  const total = Number((taxableAmount + gst).toFixed(2));
-
-  return {
-    id: `inv-${randomInt(1000, 9999)}`,
-    invoiceNo,
-    date,
-    dueDate: undefined,
-    partyId: party.id,
-    partyName: party.name,
-    items,
-    subtotal,
-    discount,
-    taxableAmount,
-    gst,
-    total,
-    paymentMode: PAYMENT_MODES[randomInt(0, PAYMENT_MODES.length - 1)],
-    amountReceived: randomFloat(0, total),
-    status: INVOICE_STATUSES[randomInt(0, INVOICE_STATUSES.length - 1)],
-    paymentRef: undefined,
-    createdAt: new Date().toISOString(),
-  };
-}
-
-/**
- * Generate a random purchase
- */
-function randomPurchase(): Purchase {
-  const purchaseNo = `${PURCHASE_PREFIX}-${randomInt(100, 999)}`;
-  const item = randomItem();
-
-  return {
-    id: `p-${randomInt(1, 999)}`,
-    refNo: purchaseNo,
-    itemId: item.sku,
-    itemName: item.name,
-    qty: randomInt(1, 50),
-    rate: randomFloat(100, 5000),
-    note: `Purchase note for ${item.name}`,
-    date: new Date().toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-  };
-}
-
-/**
- * Generate a random payment
- */
-function randomPayment(parties: Party[]): Payment {
-  const paymentNo = `${PAYMENT_PREFIX}-${randomInt(100, 999)}`;
-  const party = parties[randomInt(0, parties.length - 1)];
-  const amount = randomFloat(1000, 50000);
-
-  return {
-    id: `pc-${randomInt(1, 999)}`,
-    refNo: paymentNo,
-    partyId: party.id,
-    invoiceId: undefined,
-    amount,
-    paymentMode: PAYMENT_MODES[randomInt(0, PAYMENT_MODES.length - 1)],
-    paymentRef: `Ref-${randomInt(1000, 9999)}`,
-    date: new Date().toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-  };
-}
-
-/**
- * Generate a random return
- */
-function randomReturn(parties: Party[]): Return {
-  const returnNo = `${RETURN_PREFIX}-${randomInt(100, 999)}`;
-  const party = parties[randomInt(0, parties.length - 1)];
-  const amount = randomFloat(500, 20000);
-
-  return {
-    id: `r-${randomInt(1, 999)}`,
-    refNo: returnNo,
-    partyId: party.id,
-    invoiceId: undefined,
-    amount,
-    reason: `Return reason for ${party.name}`,
-    date: new Date().toISOString().split('T')[0],
-    createdAt: new Date().toISOString(),
-  };
-}
-
-/**
- * Generate a stock movement
- */
-function randomStockMovement(item: Item): StockMovement {
-  const type = STOCK_MOVEMENT_TYPES[randomInt(0, STOCK_MOVEMENT_TYPES.length - 1)];
-  const qty = randomInt(1, 100);
-
-  return {
-    id: `sm-${randomInt(1, 999)}`,
-    itemId: item.sku,
-    type,
-    qty,
-    refId: undefined,
-    date: new Date(Date.now() - randomInt(0, 30) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    balance: randomInt(1, 500),
-  };
-}
-
-/**
- * Generate 10 random items
- */
-export function generateTempItems(): Omit<Item, 'id' | 'createdAt' | 'updatedAt'>[] {
-  return Array.from({ length: 10 }, () => randomItem());
-}
-
-/**
- * Generate 10 random parties
- */
-export function generateTempParties(): Omit<Party, 'id' | 'createdAt' | 'updatedAt'>[] {
-  return Array.from({ length: 10 }, () => randomParty());
-}
-
-/**
- * Generate 5 random invoices with items
- */
-export function generateTempInvoices(
-  parties: Omit<Party, 'id' | 'createdAt' | 'updatedAt'>[]
-): Invoice[] {
-  const invoiceItems = Array.from({ length: 3 }, () => randomInvoiceItem());
-  return Array.from({ length: 5 }, () =>
-    randomInvoice(invoiceItems, parties as Party[]) as unknown as Invoice
-  );
-}
-
-/**
- * Generate 5 random purchases
- */
-export function generateTempPurchases(): Purchase[] {
-  return Array.from({ length: 5 }, () => randomPurchase() as unknown as Purchase);
-}
-
-/**
- * Generate 5 random payments
- */
-export function generateTempPayments(parties: Omit<Party, 'id' | 'createdAt' | 'updatedAt'>[]): Payment[] {
-  return Array.from({ length: 5 }, () => randomPayment(parties as Party[]) as unknown as Payment);
-}
-
-/**
- * Generate 3 random returns
- */
-export function generateTempReturns(parties: Omit<Party, 'id' | 'createdAt' | 'updatedAt'>[]): Return[] {
-  return Array.from({ length: 3 }, () => randomReturn(parties as Party[]) as unknown as Return);
-}
-
-/**
- * Generate 5 random stock movements
- */
-export function generateTempStockMovements(
-  items: Omit<Item, 'id' | 'createdAt' | 'updatedAt'>[]
-): StockMovement[] {
-  return Array.from({ length: 5 }, () =>
-    randomStockMovement(items[0] as Item) as unknown as StockMovement
-  );
-}

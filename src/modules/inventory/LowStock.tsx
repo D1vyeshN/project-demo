@@ -21,6 +21,8 @@ export default function LowStockPage() {
         </div>
         <div>
           <DataTable
+            scrollable={true}
+            maxHeight='112px'
             columns={[
               {
                 key: 'alert',

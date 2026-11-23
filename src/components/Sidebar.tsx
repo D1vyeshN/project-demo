@@ -21,11 +21,10 @@ import { usePurchases } from "@/modules/purchases/usePurchases";
 import { usePayments } from "@/modules/payments/usePayments";
 import { clearAllStorage, generateId, nowISO } from "@/lib/storage";
 import {
-  generateTempItems,
-  generateTempParties,
-  generateTempInvoices,
-  generateTempPurchases,
-  generateTempPayments,
+  generateSmartTempData,
+  smartTempItems,
+  smartTempParties,
+  smartTempInvoices,
 } from "@/lib/tempData";
 import { Button } from "@/shared/ui/button";
 import { ConfirmDialog } from "@/shared/ui/confirm-dialog";
@@ -147,42 +146,92 @@ export default function SidebarComponent() {
     }
 
     const now = nowISO();
-    const tempItems = generateTempItems().map((it) => ({
+    const { items, parties, invoices, purchases, payments, stockMovements } =
+      generateSmartTempData();
+
+    // Step 1: Generate items with real IDs
+    const tempItems = items.map((it) => ({
       ...it,
       id: generateId(),
       createdAt: now,
       updatedAt: now,
     }));
-    const tempParties = generateTempParties().map((p) => ({
+    const itemIdMap: Record<string, string> = {};
+    tempItems.forEach((item, i) => {
+      itemIdMap[smartTempItems[i].sku] = item.id;
+    });
+
+    // Step 2: Generate parties with real IDs
+    const tempParties = parties.map((p) => ({
       ...p,
       id: generateId(),
       createdAt: now,
       updatedAt: now,
     }));
-    const tempInvoices = generateTempInvoices(tempParties).map((inv) => ({
+    const partyIdMap: Record<string, string> = {};
+    tempParties.forEach((party, i) => {
+      partyIdMap[smartTempParties[i].name] = party.id;
+    });
+
+    // Step 3: Generate invoices with mapped party IDs
+    const tempInvoices = invoices.map((inv) => ({
       ...inv,
       id: generateId(),
+      partyId: partyIdMap[inv.partyName] || inv.partyId,
+      partyName: smartTempParties.find((p) => p.name === inv.partyName)?.name || inv.partyName,
       createdAt: now,
       updatedAt: now,
     }));
-    const tempPurchases = generateTempPurchases().map((p) => ({
+    const invoiceIdMap: Record<string, string> = {};
+    tempInvoices.forEach((inv, i) => {
+      invoiceIdMap[smartTempInvoices[i].invoiceNo] = inv.id;
+    });
+
+    // Step 4: Generate purchases with real IDs
+    const tempPurchases = purchases.map((p) => ({
       ...p,
       id: generateId(),
       createdAt: now,
     }));
-    const tempPayments = generateTempPayments(tempParties).map((pay) => ({
+
+    // Step 5: Generate payments with mapped invoice IDs
+    const tempPayments = payments.map((pay) => ({
       ...pay,
       id: generateId(),
+      partyId: partyIdMap[pay.partyId] || pay.partyId,
+      invoiceId: invoiceIdMap[pay.invoiceId || ''] || undefined,
       createdAt: now,
     }));
+
+    // Step 5.5: Recalculate party currentOutstanding based on opening + invoices - payments
+    const tempPartiesWithOutstanding = tempParties.map((party) => {
+      const partyInvoices = tempInvoices.filter((inv) => inv.partyId === party.id);
+      const partyPayments = tempPayments.filter((pay) => pay.partyId === party.id);
+      const totalInvoiced = partyInvoices.reduce((sum, inv) => sum + inv.total, 0);
+      const totalPaid = partyPayments.reduce((sum, pay) => sum + pay.amount, 0);
+      const newOutstanding = party.openingOutstanding + totalInvoiced - totalPaid;
+      return {
+        ...party,
+        currentOutstanding: newOutstanding,
+      };
+    });
+
+    // Step 6: Generate stock movements with mapped item IDs
+    const tempStockMovements = stockMovements.map((m) => ({
+      ...m,
+      id: generateId(),
+      itemId: itemIdMap[m.itemId] || m.itemId,
+      date: m.date,
+    }));
+
     setItems(tempItems);
-    setParties(tempParties);
+    setParties(tempPartiesWithOutstanding);
     setInvoices(tempInvoices);
     setPurchases(tempPurchases);
     setPayments(tempPayments);
 
     toast.success(
-      "Successfully loaded 10 items, 10 parties, 5 invoices, 5 purchases, and 5 payments as temporary data.",
+      `Successfully loaded ${tempItems.length} items, ${tempParties.length} parties, ${tempInvoices.length} invoices, ${tempPurchases.length} purchases, ${tempPayments.length} payments, and ${tempStockMovements.length} stock movements as temporary data.`,
     );
   };
 

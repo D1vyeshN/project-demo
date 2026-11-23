@@ -326,53 +326,55 @@ export default function Dashboard() {
               <CardTitle className="text-base font-semibold">Recent Sales</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="overflow-auto max-h-[50%]">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Invoice No.</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Party</TableHead>
-                      <TableHead className="text-right w-24">Amount</TableHead>
-                      <TableHead className="text-center w-20">Payment Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentSales.length === 0 ? (
+              <div className="border border-gray-200">
+                <div className="overflow-y-auto max-h-96">
+                  <Table>
+                    <TableHeader>
                       <TableRow>
-                        <TableCell colSpan={5} className="h-24 text-center text-gray-500">
-                          No sales yet. Create your first invoice.
-                        </TableCell>
+                        <TableHead>Invoice No.</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Party</TableHead>
+                        <TableHead className="text-right w-24">Amount</TableHead>
+                        <TableHead className="text-center w-20">Payment Status</TableHead>
                       </TableRow>
-                    ) : (
-                      recentSales.map((inv) => (
-                        <TableRow
-                          key={inv.id}
-                          className="cursor-pointer hover:bg-gray-50"
-                          onClick={() => navigate(`/sales/invoices/${inv.id}`)}
-                        >
-                          <TableCell className="font-medium text-gray-900">
-                            {inv.invoiceNo}
-                          </TableCell>
-                          <TableCell className="text-gray-600">
-                            {formatDate(inv.date)}
-                          </TableCell>
-                          <TableCell className="text-gray-600">{inv.partyName}</TableCell>
-                          <TableCell className="text-right font-medium text-gray-900">
-                            {inr(inv.total)}
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex justify-center">
-                              <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
-                                {inv.status}
-                              </Badge>
-                            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {recentSales.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="h-24 text-center text-gray-500">
+                            No sales yet. Create your first invoice.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        recentSales.map((inv) => (
+                          <TableRow
+                            key={inv.id}
+                            className="cursor-pointer hover:bg-gray-50"
+                            onClick={() => navigate(`/sales/invoices/${inv.id}`)}
+                          >
+                            <TableCell className="font-medium text-gray-900">
+                              {inv.invoiceNo}
+                            </TableCell>
+                            <TableCell className="text-gray-600">
+                              {formatDate(inv.date)}
+                            </TableCell>
+                            <TableCell className="text-gray-600">{inv.partyName}</TableCell>
+                            <TableCell className="text-right font-medium text-gray-900">
+                              {inr(inv.total)}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex justify-center">
+                                <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
+                                  {inv.status}
+                                </Badge>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>

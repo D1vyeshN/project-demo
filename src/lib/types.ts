@@ -61,6 +61,8 @@ export interface Invoice {
   total: number;
   paymentMode: PaymentMode;
   amountReceived: number;
+  /** Round-off difference when cash rounding applied (rounded − original) */
+  roundOff?: number;
   status: InvoiceStatus;
   paymentRef?: string;
   createdAt: string;
@@ -102,6 +104,8 @@ export interface Payment {
   partyId: string;
   invoiceId?: string; // linked invoice, if any
   amount: number;
+  /** Round-off difference when cash rounding applied (rounded − original) */
+  roundOff?: number;
   paymentMode: PaymentMode;
   paymentRef?: string; // e.g. UPI / cheque reference
   date: string;

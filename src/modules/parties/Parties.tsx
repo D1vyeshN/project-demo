@@ -25,11 +25,14 @@ const PAGE_SIZE = 5;
 const FILTER_SELECT_CLASS =
   'h-10 rounded-md border border-gray-300 bg-white px-3 text-sm text-gray-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500';
 
-/** Party status is derived from the outstanding balance (mockup screen 4) */
-const partyStatus = (outstanding: number) =>
-  outstanding > 0 ? 'Active' : 'Inactive';
+/** Party status is derived from the outstanding balance */
+const partyStatus = (outstanding: number) => {
+  if (outstanding > 0) return 'Active';      // Client owes you money
+  if (outstanding < 0) return 'Credit';      // You owe client money (credit balance)
+  return 'Settled';                          // Fully cleared
+};
 
-const PARTY_STATUSES = ['Active', 'Inactive'] as const;
+const PARTY_STATUSES = ['Active', 'Settled', 'Credit'] as const;
 
 export default function PartiesPage() {
   const { parties, loading, deleteParty } = useParties();
@@ -134,7 +137,9 @@ export default function PartiesPage() {
             className={cn(
               status === 'Active'
                 ? 'border-green-200 bg-green-100 text-green-700'
-                : 'border-gray-200 bg-gray-100 text-gray-700',
+                : status === 'Settled'
+                ? 'border-blue-200 bg-blue-100 text-blue-700'
+                : 'border-amber-200 bg-amber-100 text-amber-700',
               'px-2 py-1'
             )}
           >
