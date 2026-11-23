@@ -38,6 +38,9 @@ tsconfig.tsbuildinfo
 # Vite
 .vite/
 
+# Vercel
+.vercel/
+
 # Coverage
 coverage/
 
