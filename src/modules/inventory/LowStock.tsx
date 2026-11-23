@@ -46,7 +46,11 @@ export default function LowStockPage() {
             ]}
             data={lowStock}
             pageSize={10}
-            emptyMessage="✅ All items are well stocked. No low-stock alerts."
+            emptyMessage={
+              items.length === 0
+                ? 'No items yet. Please add items to track low stock.'
+                : '✅ All items are well stocked. No low-stock alerts.'
+            }
             emptyColSpan={3}
           />
         </div>

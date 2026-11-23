@@ -1,23 +1,30 @@
-import { useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useItems } from '@/modules/inventory/useItems';
-import { useInvoices } from '@/modules/sales/useInvoices';
-import { useParties } from '@/modules/parties/useParties';
-import { Card, CardContent, CardHeader, CardTitle } from '@/shared/ui/card';
-import { Badge } from '@/shared/ui/badge';
-import type { Invoice } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/shared/ui/table';
+import { useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useItems } from "@/modules/inventory/useItems";
+import { useInvoices } from "@/modules/sales/useInvoices";
+import { useParties } from "@/modules/parties/useParties";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/ui/card";
+import { Badge } from "@/shared/ui/badge";
+import type { Invoice } from "@/lib/types";
+import { cn } from "@/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/shared/ui/table";
 
 /* ---------- formatting helpers ---------- */
 
-const inr = (n: number) => `₹${Math.round(n).toLocaleString('en-IN')}`;
+const inr = (n: number) => `₹${Math.round(n).toLocaleString("en-IN")}`;
 
 const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
+  new Date(iso).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 
 /* ---------- period helpers ---------- */
@@ -49,7 +56,10 @@ function buildBuckets(invoices: Invoice[], months: number): Bucket[] {
         return d >= start && d <= end ? s + inv.total : s;
       }, 0);
       arr.push({
-        label: start.toLocaleDateString('en', { day: 'numeric', month: 'short' }),
+        label: start.toLocaleDateString("en", {
+          day: "numeric",
+          month: "short",
+        }),
         total,
       });
     }
@@ -61,9 +71,9 @@ function buildBuckets(invoices: Invoice[], months: number): Bucket[] {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     const total = invoices.reduce(
       (s, inv) => (sameMonth(inv.date, d) ? s + inv.total : s),
-      0
+      0,
     );
-    arr.push({ label: d.toLocaleDateString('en', { month: 'short' }), total });
+    arr.push({ label: d.toLocaleDateString("en", { month: "short" }), total });
   }
   return arr;
 }
@@ -85,13 +95,16 @@ function SalesChart({ buckets }: { buckets: Bucket[] }) {
   const niceMax = Math.ceil(rawMax / pow) * pow;
 
   const x = (i: number) =>
-    padL + (buckets.length === 1 ? plotW / 2 : (i / (buckets.length - 1)) * plotW);
+    padL +
+    (buckets.length === 1 ? plotW / 2 : (i / (buckets.length - 1)) * plotW);
   const y = (v: number) => padT + plotH - (v / niceMax) * plotH;
 
   const points = buckets.map((b, i) => ({ cx: x(i), cy: y(b.total) }));
   const linePath = points
-    .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)}`)
-    .join(' ');
+    .map(
+      (p, i) => `${i === 0 ? "M" : "L"} ${p.cx.toFixed(1)} ${p.cy.toFixed(1)}`,
+    )
+    .join(" ");
   const areaPath = `${linePath} L ${points[points.length - 1].cx.toFixed(1)} ${(
     padT + plotH
   ).toFixed(1)} L ${points[0].cx.toFixed(1)} ${(padT + plotH).toFixed(1)} Z`;
@@ -118,7 +131,7 @@ function SalesChart({ buckets }: { buckets: Bucket[] }) {
         {/* gridlines + y labels */}
         {gridFractions.map((f) => {
           const gy = padT + plotH - f * plotH;
-          const label = Math.round(niceMax * f).toLocaleString('en-IN');
+          const label = Math.round(niceMax * f).toLocaleString("en-IN");
           return (
             <g key={f}>
               <line
@@ -128,7 +141,7 @@ function SalesChart({ buckets }: { buckets: Bucket[] }) {
                 y2={gy}
                 stroke="#e5e7eb"
                 strokeWidth="1"
-                strokeDasharray={f === 0 ? '0' : '4 4'}
+                strokeDasharray={f === 0 ? "0" : "4 4"}
               />
               <text
                 x={padL - 8}
@@ -205,11 +218,11 @@ function Delta({ value, forceDown }: { value?: number; forceDown?: boolean }) {
   return (
     <span
       className={cn(
-        'text-xs font-medium flex items-center gap-1',
-        up ? 'text-green-600' : 'text-red-600'
+        "text-xs font-medium flex items-center gap-1",
+        up ? "text-green-600" : "text-red-600",
       )}
     >
-      {up ? '↑' : '↓'} {Math.abs(Math.round(value))}%
+      {up ? "↑" : "↓"} {Math.abs(Math.round(value))}%
     </span>
   );
 }
@@ -221,24 +234,29 @@ export default function Dashboard() {
   const { invoices } = useInvoices();
   const { parties } = useParties();
   const navigate = useNavigate();
-  const [range, setRange] = useState('6');
+  const [range, setRange] = useState("6");
 
   const now = new Date();
   const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
   // KPI: Total Sales (This Month)
   const thisMonthInvoices = invoices.filter((inv) => sameMonth(inv.date, now));
-  const prevMonthInvoices = invoices.filter((inv) => sameMonth(inv.date, prevMonthDate));
+  const prevMonthInvoices = invoices.filter((inv) =>
+    sameMonth(inv.date, prevMonthDate),
+  );
   const totalSales = thisMonthInvoices.reduce((s, inv) => s + inv.total, 0);
   const prevSales = prevMonthInvoices.reduce((s, inv) => s + inv.total, 0);
   const salesChange =
     prevSales > 0 ? ((totalSales - prevSales) / prevSales) * 100 : undefined;
 
   // KPI: Total Receivables (party outstanding balances)
-  const receivables = parties.reduce((s, p) => s + Math.max(0, p.currentOutstanding), 0);
+  const receivables = parties.reduce(
+    (s, p) => s + Math.max(0, p.currentOutstanding),
+    0,
+  );
   const unpaidThisMonth = thisMonthInvoices.reduce(
     (s, inv) => s + Math.max(0, inv.total - inv.amountReceived),
-    0
+    0,
   );
   const prevReceivables = Math.max(0, receivables - unpaidThisMonth);
   const receivablesChange =
@@ -247,7 +265,10 @@ export default function Dashboard() {
       : undefined;
 
   // KPI: Total Stock Value
-  const stockValue = items.reduce((s, it) => s + it.currentStock * it.sellingPrice, 0);
+  const stockValue = items.reduce(
+    (s, it) => s + it.currentStock * it.sellingPrice,
+    0,
+  );
 
   // KPI + panel: Low Stock (per-item reorder level)
   const lowStock = items
@@ -257,26 +278,42 @@ export default function Dashboard() {
   const lowStockPreview = lowStock.slice(0, 5);
 
   const recentSales = useMemo(
-    () => [...invoices].sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5),
-    [invoices]
+    () =>
+      [...invoices]
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+        .slice(0, 5),
+    [invoices],
   );
 
   const chartBuckets = useMemo(
     () => buildBuckets(invoices, Number(range)),
-    [invoices, range]
+    [invoices, range],
   );
 
   const statusColor: Record<string, string> = {
-    Paid: 'bg-green-100 text-green-700 border border-green-200',
-    'Partially Paid': 'bg-amber-100 text-amber-700 border border-amber-200',
-    Unpaid: 'bg-red-100 text-red-700 border border-red-200',
+    Paid: "bg-green-100 text-green-700 border border-green-200",
+    "Partially Paid": "bg-amber-100 text-amber-700 border border-amber-200",
+    Unpaid: "bg-red-100 text-red-700 border border-red-200",
   };
 
   const kpiCards = [
-    { title: 'Total Sales (This Month)', value: inr(totalSales), change: salesChange },
-    { title: 'Total Receivables', value: inr(receivables), change: receivablesChange },
-    { title: 'Total Stock Value', value: inr(stockValue), change: undefined },
-    { title: 'Items Low In Stock', value: String(lowStockCount), change: undefined, forceDown: true },
+    {
+      title: "Total Sales (This Month)",
+      value: inr(totalSales),
+      change: salesChange,
+    },
+    {
+      title: "Total Receivables",
+      value: inr(receivables),
+      change: receivablesChange,
+    },
+    { title: "Total Stock Value", value: inr(stockValue), change: undefined },
+    {
+      title: "Items Low In Stock",
+      value: String(lowStockCount),
+      change: undefined,
+      forceDown: true,
+    },
   ];
 
   return (
@@ -302,7 +339,9 @@ export default function Dashboard() {
           {/* Sales Overview */}
           <Card className="border-gray-200">
             <CardHeader className="flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-base font-semibold">Sales Overview</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Sales Overview
+              </CardTitle>
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value)}
@@ -323,7 +362,9 @@ export default function Dashboard() {
           {/* Recent Sales */}
           <Card className="border-gray-200">
             <CardHeader>
-              <CardTitle className="text-base font-semibold">Recent Sales</CardTitle>
+              <CardTitle className="text-base font-semibold">
+                Recent Sales
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="border border-gray-200">
@@ -334,14 +375,21 @@ export default function Dashboard() {
                         <TableHead>Invoice No.</TableHead>
                         <TableHead>Date</TableHead>
                         <TableHead>Party</TableHead>
-                        <TableHead className="text-right w-24">Amount</TableHead>
-                        <TableHead className="text-center w-20">Payment Status</TableHead>
+                        <TableHead className="text-right w-24">
+                          Amount
+                        </TableHead>
+                        <TableHead className="text-center w-20">
+                          Payment Status
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {recentSales.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={5} className="h-24 text-center text-gray-500">
+                          <TableCell
+                            colSpan={5}
+                            className="h-24 text-center text-gray-500"
+                          >
                             No sales yet. Create your first invoice.
                           </TableCell>
                         </TableRow>
@@ -350,7 +398,9 @@ export default function Dashboard() {
                           <TableRow
                             key={inv.id}
                             className="cursor-pointer hover:bg-gray-50"
-                            onClick={() => navigate(`/sales/invoices/${inv.id}`)}
+                            onClick={() =>
+                              navigate(`/sales/invoices/${inv.id}`)
+                            }
                           >
                             <TableCell className="font-medium text-gray-900">
                               {inv.invoiceNo}
@@ -358,13 +408,20 @@ export default function Dashboard() {
                             <TableCell className="text-gray-600">
                               {formatDate(inv.date)}
                             </TableCell>
-                            <TableCell className="text-gray-600">{inv.partyName}</TableCell>
+                            <TableCell className="text-gray-600">
+                              {inv.partyName}
+                            </TableCell>
                             <TableCell className="text-right font-medium text-gray-900">
                               {inr(inv.total)}
                             </TableCell>
                             <TableCell>
                               <div className="flex justify-center">
-                                <Badge className={cn(statusColor[inv.status], 'px-2 py-1')}>
+                                <Badge
+                                  className={cn(
+                                    statusColor[inv.status],
+                                    "px-2 py-1",
+                                  )}
+                                >
                                   {inv.status}
                                 </Badge>
                               </div>
@@ -383,7 +440,9 @@ export default function Dashboard() {
         {/* Low Stock Items */}
         <Card className="h-fit border-gray-200">
           <CardHeader className="flex-row items-center justify-between space-y-0">
-            <CardTitle className="text-base font-semibold">Low Stock Items</CardTitle>
+            <CardTitle className="text-base font-semibold">
+              Low Stock Items
+            </CardTitle>
             <Link
               to="/low-stock"
               className="text-xs text-blue-600 hover:text-blue-700 font-medium"
@@ -393,8 +452,12 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent className="p-4">
             {lowStockPreview.length === 0 ? (
-              <p className="text-center text-green-600 font-medium py-4">
-                ✅ All items are well stocked. No low-stock alerts.
+              <p
+                className={`text-center ${items.length !== 0 ? `text-green-600 font-medium` : " px-8"} py-4`}
+              >
+                {items.length === 0
+                  ? "No items yet. Please add items to track low stock."
+                  : "✅ All items are well stocked. No low-stock alerts."}
               </p>
             ) : (
               <div>
